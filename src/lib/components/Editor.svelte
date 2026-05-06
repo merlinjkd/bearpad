@@ -688,6 +688,7 @@
 			id: "custom-copy",
 			label: t('menu.copy', uiLanguage),
 			keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC],
+			keybindingContext: "editorTextFocus",
 			run: async (ed) => {
 				const selection = ed.getSelection();
 				if (!selection || selection.isEmpty()) return;
@@ -833,7 +834,7 @@
 			} catch (err) {
 				console.error("Paste failed:", err);
 			}
-		});
+		}, "editorTextFocus");
 
 		return () => {
 			window.open = originalOpen;
