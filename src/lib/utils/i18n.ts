@@ -196,7 +196,18 @@ export const translations: Record<LanguageCode, Translation> = {
             saveDiagramAsSvg: 'Save Diagram As SVG...',
             wordWrapOff: 'Off',
             wordWrapOn: 'Window',
-            wordWrapColumn: 'Column'
+            wordWrapColumn: 'Column',
+            find: 'Find…'
+        },
+        find: {
+            placeholder: 'Find',
+            next: 'Next match',
+            previous: 'Previous match',
+            close: 'Close',
+            matchCount: '{{current}} of {{total}}',
+            noMatches: 'No results',
+            caseSensitive: 'Match case',
+            wholeWord: 'Match whole word'
         },
         toast: {
             imageSavedSuccessfully: 'Image saved successfully',
@@ -295,7 +306,8 @@ export const translations: Record<LanguageCode, Translation> = {
             showTableOfContents: 'Show Table of Contents',
             hideTableOfContents: 'Hide Table of Contents',
             newTab: 'New Tab',
-            close: 'Close'
+            close: 'Close',
+            find: 'Find'
         },
         toc: {
             noHeadingsFound: 'No headings found'

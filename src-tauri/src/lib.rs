@@ -1028,6 +1028,12 @@ pub fn run() {
                     .item(&PredefinedMenuItem::copy(app, None)?)
                     .item(&PredefinedMenuItem::paste(app, None)?)
                     .item(&PredefinedMenuItem::select_all(app, None)?)
+                    .separator()
+                    .item(
+                        &MenuItemBuilder::with_id("menu-edit-find", "Find…")
+                            .accelerator("CmdOrCtrl+F")
+                            .build(app)?,
+                    )
                     .build()?;
 
                 let window_submenu = SubmenuBuilder::new(app, "Window")
@@ -1139,7 +1145,10 @@ pub fn run() {
 
             if id == "check-updates" {
                 let _ = window.emit("menu-check-updates", ());
-            } else if id == "menu-app-quit" || id.starts_with("menu-file-") {
+            } else if id == "menu-app-quit"
+                || id.starts_with("menu-file-")
+                || id.starts_with("menu-edit-")
+            {
                 let _ = window.emit(id, ());
             }
         })

@@ -51,6 +51,7 @@
 		theme = 'system',
 		onSetTheme,
 		onopenSettings,
+		onfind,
 	} = $props<{
 		isFocused: boolean;
 		isScrolled: boolean;
@@ -88,6 +89,7 @@
 		theme?: string;
 		onSetTheme?: (theme: string) => void;
 		onopenSettings?: () => void;
+		onfind?: () => void;
 	}>();
 
 	const appWindow = getCurrentWindow();
@@ -205,6 +207,12 @@
 			}
 			if (isMarkdown && !tabManager.activeTab?.isSplit) {
 				list.push('edit');
+			}
+			// Find in preview: only meaningful when a preview is actually
+			// visible (view mode or split). In pure edit mode Monaco's own
+			// Ctrl+F handles search, so we hide the entry there.
+			if (isMarkdown && (!isEditing || tabManager.activeTab?.isSplit)) {
+				list.push('find');
 			}
 			list.push('zen');
 			list.push('tabs');
@@ -547,6 +555,26 @@
 						</svg>
 						<span class="action-label">{t('menu.tabs', currentLanguage).replace('{{action}}', settings.showTabs ? t('menu.hide', currentLanguage) : t('menu.show', currentLanguage) )}</span>
 						<span class="menu-shortcut">{modifier}+Shift+B</span>
+					</button>
+				{:else if id === 'find'}
+					<button
+						class="title-action-btn"
+						onclick={() => {
+							hideTooltip();
+							kebabMenuOpen = false;
+							onfind?.();
+						}}
+						aria-label={t('tooltip.find', currentLanguage)}
+											onmouseenter={(e) => showTooltip(e, t('tooltip.find', currentLanguage), 'F')}
+						onmousedown={(e) => e.preventDefault()}
+						onmouseleave={hideTooltip}
+						transition:fly={{ x: 10, duration: 200 }}>
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<circle cx="11" cy="11" r="7"></circle>
+							<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+						</svg>
+						<span class="action-label">{t('menu.find', currentLanguage)}</span>
+						<span class="menu-shortcut">{modifier}+F</span>
 					</button>
 				{:else if id === 'open_loc'}
 					<button

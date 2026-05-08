@@ -1120,6 +1120,12 @@
 		editor?.trigger("keyboard", "redo", null);
 	}
 
+	export const triggerFind = () => {
+		if (!editor) return;
+		editor.focus();
+		editor.getAction("actions.find")?.run();
+	}
+
 	export const getValue = () => editor?.getValue() || "";
 	export const setValue = (val: string) => editor?.setValue(val);
 	export const focus = () => editor?.focus();
