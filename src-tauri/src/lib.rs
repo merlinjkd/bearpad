@@ -3,9 +3,115 @@ use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use regex::{Captures, Regex};
 use std::borrow::Cow;
 use std::fs;
-use std::path::Path;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager, State};
+
+/// Write `bytes` to `target` durably and atomically: write to a sibling temp
+/// file, fsync it, then rename over the target. Atomic on both Unix and
+/// modern Windows — `std::fs::rename` calls `MoveFileExW` with
+/// `MOVEFILE_REPLACE_EXISTING` on Windows since Rust 1.35, so an existing
+/// destination is replaced atomically without a dedicated fallback path.
+/// Markpad targets Tauri v2 (Rust 1.70+), so we can rely on this everywhere.
+///
+/// **Other correctness preservations vs. plain `fs::write`:**
+/// - **Symlinks:** if `target` is a symlink, follow it to the real file so we
+///   replace the linked content rather than the link itself.
+/// - **Permissions:** on overwrite, restore the destination's original mode
+///   bits after the rename; the temp file otherwise inherits the process
+///   umask.
+/// - **POSIX durability:** on Unix, fsync the parent directory after the
+///   rename so the directory entry update survives a crash. Windows NTFS
+///   journals this on its own, so no extra step is needed there.
+fn atomic_write(target: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    // Resolve symlinks so we update the real file. `symlink_metadata` does NOT
+    // follow links (unlike `metadata`); if target is a symlink, canonicalize
+    // returns the real path it points to. For a non-existent target or a
+    // regular file, we keep the original path.
+    let resolved: PathBuf = match fs::symlink_metadata(target) {
+        Ok(m) if m.file_type().is_symlink() => target.canonicalize()?,
+        _ => target.to_path_buf(),
+    };
+    let target = resolved.as_path();
+
+    // For a relative path with no leading directory (e.g. just "foo.md"),
+    // `target.parent()` returns Some("") which is unusable for the temp
+    // file. Treat that as the current directory so we can still place the
+    // temp alongside the target and keep the rename atomic.
+    let parent_path: PathBuf = match target.parent() {
+        Some(p) if !p.as_os_str().is_empty() => p.to_path_buf(),
+        _ => PathBuf::from("."),
+    };
+
+    // Snapshot existing permissions so we can re-apply them after rename.
+    // `fs::rename` brings over the temp file's permissions, dropping mode
+    // bits / ACLs that the destination had. `None` means "target didn't
+    // exist", in which case there's nothing to restore.
+    let existing_perms = fs::metadata(target).ok().map(|m| m.permissions());
+
+    let file_name = target
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "markpad".to_string());
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let pid = std::process::id();
+    let temp_name = format!(".{}.markpad-tmp-{}-{}", file_name, pid, nanos);
+    let mut temp_path = parent_path.clone();
+    temp_path.push(temp_name);
+
+    let write_result = (|| -> std::io::Result<()> {
+        let mut f = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temp_path)?;
+        f.write_all(bytes)?;
+        f.sync_all()?;
+        Ok(())
+    })();
+
+    if let Err(e) = write_result {
+        let _ = fs::remove_file(&temp_path);
+        return Err(e);
+    }
+
+    // Atomic on both Unix and modern Windows: std::fs::rename uses
+    // `rename(2)` (POSIX) or `MoveFileExW(MOVEFILE_REPLACE_EXISTING)`
+    // (Windows since Rust 1.35). The destination is either fully replaced
+    // or left untouched — never partially overwritten or missing. If the
+    // rename fails (e.g. target locked by another process on Windows),
+    // we clean up the temp file and surface the original error without
+    // touching the target.
+    if let Err(e) = fs::rename(&temp_path, target) {
+        let _ = fs::remove_file(&temp_path);
+        return Err(e);
+    }
+
+    // Best-effort restore of the original mode bits. If this fails (e.g. the
+    // filesystem doesn't support it, or the user lacks privileges), the file
+    // contents are still correctly written, so we don't surface the error.
+    if let Some(perms) = existing_perms {
+        let _ = fs::set_permissions(target, perms);
+    }
+
+    // POSIX durability: a rename is not durable until the parent directory's
+    // metadata is also flushed to disk. Without this, a crash right after
+    // rename could leave the target missing or pointing at the old inode.
+    // Windows doesn't expose directory fsync semantics — its NTFS journal
+    // already handles this, so we skip the call there.
+    #[cfg(unix)]
+    {
+        if let Ok(dir) = fs::File::open(&parent_path) {
+            let _ = dir.sync_all();
+        }
+    }
+
+    Ok(())
+}
 
 struct WatcherState {
     watcher: Mutex<Option<RecommendedWatcher>>,
@@ -210,12 +316,12 @@ fn read_file_content(path: String) -> Result<String, String> {
 
 #[tauri::command]
 fn save_file_content(path: String, content: String) -> Result<(), String> {
-    fs::write(path, content).map_err(|e| e.to_string())
+    atomic_write(Path::new(&path), content.as_bytes()).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn save_file_binary(path: String, data: Vec<u8>) -> Result<(), String> {
-    fs::write(path, data).map_err(|e| e.to_string())
+    atomic_write(Path::new(&path), &data).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -630,7 +736,13 @@ fn save_image(parent_dir: String, filename: String, base64_data: String, image_d
 
     fs::write(&file_path, bytes).map_err(|e| e.to_string())?;
 
-    Ok(format!("{}/{}", image_directory, filename))
+    let rel_path = if image_directory.is_empty() {
+        filename
+    } else {
+        format!("{}/{}", image_directory, filename)
+    };
+
+    Ok(rel_path)
 }
 
 #[tauri::command]
@@ -662,7 +774,13 @@ fn copy_file_to_img(src_path: String, parent_dir: String, image_directory: Strin
     let final_dest = img_dir.join(&dest_name);
     fs::copy(src, &final_dest).map_err(|e| e.to_string())?;
 
-    Ok(format!("{}/{}", image_directory, dest_name))
+    let rel_path = if image_directory.is_empty() {
+        dest_name
+    } else {
+        format!("{}/{}", image_directory, dest_name)
+    };
+
+    Ok(rel_path)
 }
 
 #[tauri::command]
@@ -770,6 +888,8 @@ pub fn run() {
                 .set_focus();
         }))
         .plugin(tauri_plugin_prevent_default::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(
@@ -827,6 +947,106 @@ pub fn run() {
             }
 
             let _window = window_builder.build()?;
+
+            #[cfg(target_os = "macos")]
+            {
+                use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
+
+                let app_name = app.package_info().name.clone();
+
+                let check_item =
+                    MenuItemBuilder::with_id("check-updates", "Check for Updates…").build(app)?;
+
+                let app_submenu = SubmenuBuilder::new(app, &app_name)
+                    .item(&PredefinedMenuItem::about(
+                        app,
+                        Some(&format!("About {}", app_name)),
+                        None,
+                    )?)
+                    .separator()
+                    .item(&check_item)
+                    .separator()
+                    .item(&PredefinedMenuItem::services(app, None)?)
+                    .separator()
+                    .item(&PredefinedMenuItem::hide(app, None)?)
+                    .item(&PredefinedMenuItem::hide_others(app, None)?)
+                    .item(&PredefinedMenuItem::show_all(app, None)?)
+                    .separator()
+                    .item(
+                        &MenuItemBuilder::with_id(
+                            "menu-app-quit",
+                            format!("Quit {}", app_name),
+                        )
+                        .accelerator("CmdOrCtrl+Q")
+                        .build(app)?,
+                    )
+                    .build()?;
+
+                let file_submenu = SubmenuBuilder::new(app, "File")
+                    .item(
+                        &MenuItemBuilder::with_id("menu-file-new", "New File")
+                            .accelerator("CmdOrCtrl+T")
+                            .build(app)?,
+                    )
+                    .item(
+                        &MenuItemBuilder::with_id("menu-file-open", "Open File…")
+                            .accelerator("CmdOrCtrl+O")
+                            .build(app)?,
+                    )
+                    .item(
+                        &MenuItemBuilder::with_id("menu-file-close", "Close")
+                            .accelerator("CmdOrCtrl+W")
+                            .build(app)?,
+                    )
+                    .separator()
+                    .item(
+                        &MenuItemBuilder::with_id("menu-file-save", "Save")
+                            .accelerator("CmdOrCtrl+S")
+                            .build(app)?,
+                    )
+                    .item(
+                        &MenuItemBuilder::with_id("menu-file-save-as", "Save As…")
+                            .accelerator("CmdOrCtrl+Shift+S")
+                            .build(app)?,
+                    )
+                    .separator()
+                    .item(
+                        &MenuItemBuilder::with_id("menu-file-export-html", "Export as HTML")
+                            .build(app)?,
+                    )
+                    .item(
+                        &MenuItemBuilder::with_id("menu-file-export-pdf", "Export as PDF")
+                            .build(app)?,
+                    )
+                    .build()?;
+
+                let edit_submenu = SubmenuBuilder::new(app, "Edit")
+                    .item(&PredefinedMenuItem::undo(app, None)?)
+                    .item(&PredefinedMenuItem::redo(app, None)?)
+                    .separator()
+                    .item(&PredefinedMenuItem::cut(app, None)?)
+                    .item(&PredefinedMenuItem::copy(app, None)?)
+                    .item(&PredefinedMenuItem::paste(app, None)?)
+                    .item(&PredefinedMenuItem::select_all(app, None)?)
+                    .separator()
+                    .item(
+                        &MenuItemBuilder::with_id("menu-edit-find", "Find…")
+                            .accelerator("CmdOrCtrl+F")
+                            .build(app)?,
+                    )
+                    .build()?;
+
+                let window_submenu = SubmenuBuilder::new(app, "Window")
+                    .item(&PredefinedMenuItem::minimize(app, None)?)
+                    .item(&PredefinedMenuItem::close_window(app, None)?)
+                    .build()?;
+
+                let menu = MenuBuilder::new(app)
+                    .items(&[&app_submenu, &file_submenu, &edit_submenu, &window_submenu])
+                    .build()?;
+
+                app.set_menu(menu)?;
+            }
 
             let config_dir = app.path().app_config_dir()?;
             let theme_path = config_dir.join("theme.txt");
@@ -908,6 +1128,30 @@ pub fn run() {
             cleanup_empty_img_dir,
             list_directory_contents
         ])
+        .on_menu_event(|app, event| {
+            let id = event.id().as_ref();
+            // Emit to the focused webview window rather than `app.emit(...)`,
+            // which would broadcast to every webview. Markpad is currently
+            // single-window, but additional webviews (e.g. detached tabs)
+            // would otherwise receive duplicate New/Close/Save invocations.
+            // Falls back to "main" if no window is focused (e.g. menu fired
+            // while the app is in the background).
+            let target = app
+                .webview_windows()
+                .into_values()
+                .find(|w| w.is_focused().unwrap_or(false))
+                .or_else(|| app.get_webview_window("main"));
+            let Some(window) = target else { return };
+
+            if id == "check-updates" {
+                let _ = window.emit("menu-check-updates", ());
+            } else if id == "menu-app-quit"
+                || id.starts_with("menu-file-")
+                || id.starts_with("menu-edit-")
+            {
+                let _ = window.emit(id, ());
+            }
+        })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|_app_handle, _event| {

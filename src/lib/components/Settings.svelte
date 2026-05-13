@@ -2,6 +2,7 @@
 	import { invoke } from '@tauri-apps/api/core';
 	import { getVersion } from '@tauri-apps/api/app';
 	import { settings, DEFAULT_FONTS, type OSType } from '../stores/settings.svelte.js';
+	import { updateStore } from '../stores/update.svelte.js';
 	import { fade, scale, fly } from 'svelte/transition';
 	import { t, getSupportedLanguages } from '../utils/i18n.js';
 	import type { LanguageCode } from '../utils/i18n.js';
@@ -13,7 +14,7 @@
 		onclose,
 	} = $props<{ show?: boolean; theme?: string; onSetTheme?: (t: string) => void; onclose: () => void }>();
 
-	let activeCategory = $state<'editor' | 'preview' | 'appearance'>('editor');
+	let activeCategory = $state<'editor' | 'preview' | 'appearance' | 'files'>('editor');
 	let highlightMenuOpen = $state(false);
 	const highlightColors = [
 		{ value: 'default', color: 'var(--color-accent-fg)' },
@@ -230,8 +231,45 @@
 							</svg>
 							{t('settings.appearance', settings.language)}
 					</button>
+					<button class="nav-item" class:active={activeCategory === 'files'} onclick={() => (activeCategory = 'files')}>
+						<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="16"
+								height="16"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round">
+								<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+								<polyline points="14 2 14 8 20 8"></polyline>
+								<line x1="9" y1="13" x2="15" y2="13"></line>
+								<line x1="9" y1="17" x2="13" y2="17"></line>
+							</svg>
+							{t('settings.files', settings.language)}
+					</button>
 
 					<div class="nav-footer">
+						<button
+							class="check-updates-btn"
+							onclick={() => updateStore.openDialog()}
+							aria-label={t('menu.checkForUpdates', settings.language)}>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="16"
+								height="16"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round">
+								<polyline points="23 4 23 10 17 10"></polyline>
+								<path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+							</svg>
+							<span>{t('menu.checkForUpdates', settings.language)}</span>
+						</button>
 						<button
 							class="github-btn"
 							onclick={() =>
@@ -666,6 +704,28 @@
 						</label>
 					</div>
 					</div>
+					{:else if activeCategory === 'files'}
+					<div class="settings-group">
+						<div class="settings-group-header">
+							<h2>{t('settings.fileSettings', settings.language)}</h2>
+						</div>
+
+						<div class="setting-item">
+							<label for="files-auto-save">{t('settings.autoSave', settings.language)}</label>
+							<label class="toggle">
+								<input id="files-auto-save" type="checkbox" checked={settings.autoSave} onchange={() => settings.toggleAutoSave()} />
+								<span class="toggle-slider"></span>
+							</label>
+						</div>
+
+						<div class="setting-item">
+							<label for="files-confirm-before-save">{t('settings.confirmBeforeSave', settings.language)}</label>
+							<label class="toggle">
+								<input id="files-confirm-before-save" type="checkbox" checked={settings.confirmBeforeSave} onchange={() => settings.toggleConfirmBeforeSave()} />
+								<span class="toggle-slider"></span>
+							</label>
+						</div>
+					</div>
 					{/if}
 				</div>
 			</div>
@@ -782,7 +842,8 @@
 		flex-direction: column;
 	}
 
-	.github-btn {
+	.github-btn,
+	.check-updates-btn {
 		display: flex;
 		align-items: center;
 		padding: 8px 12px;
@@ -796,10 +857,22 @@
 		text-align: left;
 		transition: all 0.1s;
 		gap: 8px;
+		font-family: inherit;
 	}
 
-	.github-btn:hover {
+	.github-btn:hover,
+	.check-updates-btn:hover {
 		opacity: 1;
+	}
+
+	.check-updates-btn svg {
+		width: 16px;
+		height: 16px;
+		flex-shrink: 0;
+	}
+
+	.check-updates-btn span {
+		margin-top: 1px;
 	}
 
 	.github-btn .github-icon {

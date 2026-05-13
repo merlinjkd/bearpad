@@ -16,18 +16,24 @@
 	let isDragging = $state(false);
 	let startX = 0;
 	let startY = 0;
+	let overlayEl: HTMLElement;
 
 	const MIN_ZOOM = 0.1;
-	const MAX_ZOOM = 10;
+	const MAX_ZOOM = 20;
 
 	function handleWheel(e: WheelEvent) {
 		e.preventDefault();
 		const delta = -e.deltaY;
 		const factor = delta > 0 ? 1.1 : 0.9;
-		const newZoom = zoom * factor;
-		if (newZoom >= MIN_ZOOM && newZoom <= MAX_ZOOM) {
-			zoom = newZoom;
-		}
+		const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor));
+
+		// zoom toward cursor
+		const rect = overlayEl.getBoundingClientRect();
+		const cx = e.clientX - rect.left - rect.width / 2;
+		const cy = e.clientY - rect.top - rect.height / 2;
+		panX = cx - (cx - panX) * (newZoom / zoom);
+		panY = cy - (cy - panY) * (newZoom / zoom);
+		zoom = newZoom;
 	}
 
 	function handleMouseDown(e: MouseEvent) {
@@ -59,7 +65,7 @@
 	});
 </script>
 
-<div class="zoom-overlay" transition:fade={{ duration: 150 }} onclick={onclose} role="presentation">
+<div class="zoom-overlay" transition:fade={{ duration: 150 }} onclick={onclose} role="presentation" bind:this={overlayEl}>
 	<button class="close-btn" onclick={onclose} aria-label={t('common.close', settings.language)}>
 		<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 			<line x1="18" y1="6" x2="6" y2="18"></line>
@@ -76,12 +82,12 @@
 		onmousemove={handleMouseMove}
 		onmouseup={handleMouseUp}
 		onmouseleave={handleMouseUp}
-		style="transform: translate({panX}px, {panY}px) scale({zoom}); cursor: {isDragging ? 'grabbing' : 'grab'}"
+		style="transform: translate({panX}px, {panY}px); cursor: {isDragging ? 'grabbing' : 'grab'}"
 	>
 		{#if src}
-			<img {src} alt="Zoomed view" />
+			<img {src} alt="Zoomed view" style="zoom: {zoom};" />
 		{:else if html}
-			<div class="svg-container">{@html html}</div>
+			<div class="svg-container" style="zoom: {zoom};">{@html html}</div>
 		{/if}
 	</div>
 </div>
@@ -134,8 +140,6 @@
 		align-items: center;
 		justify-content: center;
 		user-select: none;
-		will-change: transform;
-		transform-origin: center center;
 	}
 
 	img {
@@ -153,12 +157,20 @@
 		padding: 32px;
 		border-radius: 8px;
 		box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-		overflow: hidden;
+		/* size the container to the SVG's natural proportions, capped at viewport */
+		max-width: min(90vw, 1200px);
+		max-height: 85vh;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	:global(.svg-container svg) {
+		/* let the SVG fill the container using its viewBox — stays fully vector */
 		display: block;
+		width: 100%;
+		height: 100%;
 		min-width: 400px;
-		height: auto;
+		min-height: 200px;
 	}
 </style>

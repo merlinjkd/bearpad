@@ -221,6 +221,8 @@ body {
 	font-size: 16px;
 	line-height: 1.5;
 	word-wrap: break-word;
+	overflow-wrap: anywhere;
+	text-align: left;
 	user-select: text;
 	-webkit-user-select: text;
 }
@@ -428,10 +430,11 @@ body {
 .markdown-body table {
 	border-spacing: 0;
 	border-collapse: collapse;
-	display: block;
-	width: max-content;
+	display: table;
+	table-layout: fixed;
+	width: 100%;
 	max-width: 100%;
-	overflow: auto;
+	overflow: visible;
 	margin-top: 0;
 	margin-bottom: 16px;
 }
@@ -444,6 +447,9 @@ body {
 .markdown-body table th {
 	padding: 6px 13px;
 	border: 1px solid var(--color-border-default);
+	white-space: normal;
+	overflow-wrap: anywhere;
+	word-break: normal;
 }
 
 .markdown-body table tr {
@@ -606,6 +612,8 @@ body {
 .markdown-body p {
 	margin-top: 0;
 	margin-bottom: 10px;
+	white-space: normal;
+	overflow-wrap: anywhere;
 }
 
 .markdown-body blockquote {
@@ -635,7 +643,9 @@ body {
 }
 
 .markdown-body li {
-	word-wrap: break-all;
+	word-wrap: break-word;
+	overflow-wrap: anywhere;
+	word-break: normal;
 }
 
 .markdown-body li>p {
@@ -668,6 +678,8 @@ body {
 	margin: 0;
 	font-size: 85%;
 	white-space: break-spaces;
+	overflow-wrap: anywhere;
+	word-break: break-word;
 	background-color: var(--color-neutral-muted);
 	border-radius: 6px;
 }
@@ -684,14 +696,15 @@ body {
 		Liberation Mono,
 		monospace;
 	font-size: 12px;
-	word-wrap: normal;
+	word-wrap: break-word;
+	white-space: pre-wrap;
 }
 
 .markdown-body pre>code {
 	padding: 0;
 	margin: 0;
-	word-break: normal;
-	white-space: pre;
+	word-break: break-word;
+	white-space: pre-wrap;
 	background: transparent;
 	border: 0;
 }
@@ -702,13 +715,13 @@ body {
 
 .markdown-body .highlight pre {
 	margin-bottom: 0;
-	word-break: normal;
+	word-break: break-word;
 }
 
 .markdown-body .highlight pre,
 .markdown-body pre {
 	padding: 18px 16px;
-	overflow-x: auto;
+	overflow-x: hidden;
 	overflow-y: hidden;
 	font-size: 85%;
 	line-height: 1.45;
@@ -750,7 +763,9 @@ body {
 	margin: 0;
 	overflow: visible;
 	line-height: inherit;
-	word-wrap: normal;
+	word-wrap: break-word;
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
 	background-color: transparent;
 	border: 0;
 }
@@ -1262,26 +1277,42 @@ body {
 
 .markdown-body ul li.task-list-item,
 .markdown-body .task-list-item {
+	--task-checkbox-size: 15px;
 	padding-left: 0;
 	margin-left: -1.5em;
-	display: flex;
+	display: grid;
+	grid-template-columns: var(--task-checkbox-size) minmax(0, 1fr);
+	column-gap: 0.5em;
 	align-items: baseline;
-	gap: 0.5em;
+}
+
+.markdown-body .task-text {
+	display: block;
+	min-width: 0;
+	grid-column: 2;
+}
+
+.markdown-body .task-list-item > :not(input[data-task-checkbox]):not(.task-text) {
+	grid-column: 2;
+}
+
+.markdown-body .task-list-item > input[data-task-checkbox] + :not(.task-text) {
+	grid-row: 2;
 }
 
 .markdown-body input[data-task-checkbox] {
 	-webkit-appearance: none;
 	appearance: none;
-	width: 15px;
-	height: 15px;
-	min-width: 15px;
+	width: var(--task-checkbox-size, 15px);
+	height: var(--task-checkbox-size, 15px);
+	min-width: var(--task-checkbox-size, 15px);
 	border: 1.5px solid var(--color-border-default);
 	border-radius: 3px;
 	background: transparent;
 	cursor: pointer;
 	position: relative;
 	top: 2px;
-	flex-shrink: 0;
+	grid-column: 1;
 	transition: background-color 0.1s ease, border-color 0.1s ease;
 }
 

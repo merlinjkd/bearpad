@@ -13,9 +13,12 @@
 	import TitleBar from './components/TitleBar.svelte';
 	import Editor from './components/Editor.svelte';
 	import Modal from './components/Modal.svelte';
+	import UpdateDialog from './components/UpdateDialog.svelte';
+	import { updateStore } from './stores/update.svelte.js';
 	import ContextMenu, { type ContextMenuItem } from './components/ContextMenu.svelte';
 	import Toc from './components/Toc.svelte';
 	import Toast from './components/Toast.svelte';
+	import FindBar from './components/FindBar.svelte';
 	import { exportAsHtml as _exportHtml, exportAsPdf } from './utils/export';
 	import ZoomOverlay from './components/ZoomOverlay.svelte';
 import { processMarkdownHtml } from './utils/markdown';
@@ -74,8 +77,27 @@ import { t } from './utils/i18n.js';
 		undo: () => void;
 		redo: () => void;
 		revealHeader: (text: string) => void;
+		triggerFind: () => void;
 	} | null>(null);
 	let liveMode = $state(false);
+
+	let findOpen = $state(false);
+	let findBar = $state<{ reapply: () => void; clearHighlights: () => void } | null>(null);
+
+	// Decide where Cmd/Ctrl+F should land based on what's visible and where
+	// focus is. Used by both the JS keydown handler (Win/Linux + macOS in-page
+	// shortcut) and the macOS native menu listener (which fires Cmd+F via the
+	// Edit menu accelerator and bypasses the JS keydown path).
+	function triggerFindAction() {
+		const active = document.activeElement as Node | null;
+		const editorHasFocus = !!editorPaneEl && !!active && editorPaneEl.contains(active);
+		const previewVisible = !isEditing || !!tabManager.activeTab?.isSplit;
+		if (editorHasFocus || !previewVisible) {
+			editorPane?.triggerFind?.();
+		} else if (markdownBody) {
+			findOpen = true;
+		}
+	}
 
 	let isDragging = $state(false);
 	let dragTarget = $state<'editor' | 'preview' | null>(null);
@@ -87,6 +109,34 @@ import { t } from './utils/i18n.js';
 	function addToast(message: string, type: 'info' | 'error' | 'warning' = 'info') {
 		const id = crypto.randomUUID();
 		toasts.push({ id, message, type });
+	}
+
+	// --- Auto-save bookkeeping (see saveContent + auto-save $effect below) ---
+	// Per-tab debounce timers so switching tabs cannot kill another tab's pending save.
+	const autoSaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+	// Per-tab last-seen rawContent value, used by the auto-save effect to
+	// detect which tab actually changed in this run. JS string `===` is a
+	// value compare, so any edit yields a different value — including
+	// same-length ones (overwriting characters, formatting toggles) that
+	// a length-based tick would miss.
+	const lastContentRefByTab = new Map<string, string>();
+	// Suppress the file-watcher reload that fires when we ourselves write the file.
+	// Maps absolute path -> wall-clock ms after which an event for that path is real again.
+	const selfWriteUntilByPath = new Map<string, number>();
+	const SELF_WRITE_GRACE_MS = 400;
+	const AUTO_SAVE_DEBOUNCE_MS = 1500;
+
+	// Cancel a pending auto-save for a tab. Call this only on paths that
+	// COMMIT to a save or discard outcome — never before showing a modal,
+	// because if the user picks Cancel, the timer is gone forever and
+	// background auto-save is silently disabled for that tab until the
+	// next keystroke.
+	function cancelPendingAutoSave(tabId: string) {
+		const t = autoSaveTimers.get(tabId);
+		if (t) {
+			clearTimeout(t);
+			autoSaveTimers.delete(tabId);
+		}
 	}
 
 	// in-page scroll position history for mouse 4/5 nav
@@ -103,10 +153,21 @@ import { t } from './utils/i18n.js';
 
 	// derived from tab manager
 	let currentFile = $derived(tabManager.activeTab?.path ?? '');
-	let isMarkdown = $derived(['md', 'markdown', 'mdown', 'mkd', 'txt'].includes(currentFile.split('.').pop()?.toLowerCase() || ''));
+	const markdownLinkExtensions = ['.md', '.markdown', '.mdown', '.mkd', '.txt'];
+	function hasMarkdownLinkExtension(path: string) {
+		const normalizedPath = path.toLowerCase();
+		return markdownLinkExtensions.some((ext) => normalizedPath.endsWith(ext));
+	}
+	let isMarkdown = $derived(hasMarkdownLinkExtension(currentFile));
 	let editorLanguage = $derived(getLanguage(currentFile));
 	let htmlContent = $derived(tabManager.activeTab?.content ?? '');
-	let sanitizedHtml = $derived(DOMPurify.sanitize(htmlContent));
+	const markdownLinkExtensionPattern = markdownLinkExtensions
+		.map((ext) => ext.slice(1).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+		.join('|');
+	const allowedMarkdownUriPattern = new RegExp(`^(?:(?:[a-z]:[^?#]*\\.(?:${markdownLinkExtensionPattern})(?:[?#].*)?$)|(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|asset|tauri):|[^a-z]|[a-z+.\\-]+(?:[^a-z+.\\-:]|$))`, 'i');
+	let sanitizedHtml = $derived(DOMPurify.sanitize(htmlContent, {
+		ALLOWED_URI_REGEXP: allowedMarkdownUriPattern,
+	}));
 	let scrollTop = $derived(tabManager.activeTab?.scrollTop ?? 0);
 	let isScrolled = $derived(scrollTop > 0);
 	let windowTitle = $derived(tabManager.activeTab?.title ?? 'Markpad');
@@ -248,8 +309,8 @@ import { t } from './utils/i18n.js';
 		if (settings.restoreStateOnReopen) {
 			const hasUnsaved = tabManager.tabs.some((t) => t.isDirty || (t.path === '' && t.rawContent.trim() !== ''));
 			if (hasUnsaved) {
-				const response = await askCustom(t('modal.exit.unsaved.message'), {
-					title: t('modal.exit.unsaved.title'),
+				const response = await askCustom(t('modal.areYouSureYouWantToExit', settings.language), {
+					title: t('modal.confirmExit', settings.language),
 					kind: 'warning',
 					showSave: false,
 				});
@@ -290,35 +351,8 @@ import { t } from './utils/i18n.js';
 	$effect(() => {
 		const _ = tabManager.activeTabId;
 		showHome = false;
+		findOpen = false;
 	});
-
-
-	function processInlineMath(root: Element) {
-		const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-			acceptNode(node) {
-				let curr = node.parentElement;
-				while (curr && curr !== root) {
-					if (['CODE', 'PRE', 'SCRIPT', 'STYLE'].includes(curr.tagName)) return NodeFilter.FILTER_REJECT;
-					curr = curr.parentElement;
-				}
-				return NodeFilter.FILTER_ACCEPT;
-			},
-		});
-
-		const toReplace: { node: Text; newText: string }[] = [];
-		let node: Node | null;
-		const regex = /(^|[^\\])\$(?!\s)([^$]*?[^\s\\])\$(?![\d])/g;
-		while ((node = walker.nextNode())) {
-			const text = (node as Text).nodeValue || '';
-			if (text.includes('$')) {
-				const newText = text.replace(regex, "$1\\($2\\)");
-				if (newText !== text) toReplace.push({ node: node as Text, newText });
-			}
-		}
-		for (const { node, newText } of toReplace) {
-			node.nodeValue = newText;
-		}
-	}
 
 	function processHighlights(root: Element) {
 		const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
@@ -433,10 +467,21 @@ import { t } from './utils/i18n.js';
 		}
 	}
 
-	async function loadMarkdown(filePath: string, options: { navigate?: boolean; skipTabManagement?: boolean; preserveEditState?: boolean } = {}) {
+	type LoadMarkdownOptions = {
+		navigate?: boolean;
+		skipTabManagement?: boolean;
+		preserveEditState?: boolean;
+		resetScrollHistory?: boolean;
+	};
+
+	async function loadMarkdown(filePath: string, options: LoadMarkdownOptions = {}) {
 		showHome = false;
 		let existing = null;
 		try {
+			if (options.resetScrollHistory || filePath !== currentFile) {
+				scrollHistory = [];
+				scrollFuture = [];
+			}
 			if (options.navigate && tabManager.activeTab) {
 				tabManager.navigate(tabManager.activeTab.id, filePath);
 			} else if (!options.skipTabManagement) {
@@ -452,8 +497,7 @@ import { t } from './utils/i18n.js';
 			const activeId = tabManager.activeTabId;
 			if (!activeId) return;
 
-			const ext = filePath.split('.').pop()?.toLowerCase();
-			const isMarkdown = ['md', 'markdown', 'mdown', 'mkd', 'txt'].includes(ext || '');
+			const isMarkdown = hasMarkdownLinkExtension(filePath);
 			const tab = tabManager.tabs.find((t) => t.id === activeId);
 
 			if (isMarkdown) {
@@ -639,11 +683,12 @@ import { t } from './utils/i18n.js';
 
 		// KaTeX math rendering
 		if (katex) {
-			const mathElements = markdownBody.querySelectorAll('span[data-math]');
+			const mathElements = markdownBody.querySelectorAll('[data-math]');
 			for (const el of Array.from(mathElements)) {
 				const isDisplay = el.getAttribute('data-math') === 'display';
+				const mathSource = el.getAttribute('data-math-source') || el.textContent || '';
 				try {
-					katex.render(el.textContent || '', el as HTMLElement, {
+					katex.render(mathSource, el as HTMLElement, {
 						displayMode: isDisplay,
 						throwOnError: false,
 					});
@@ -666,7 +711,17 @@ import { t } from './utils/i18n.js';
 	}
 
 	$effect(() => {
-		if (htmlContent && markdownBody && !isEditing && hljs && renderMathInElement && mermaid) renderRichContent();
+		if (sanitizedHtml && markdownBody && !isEditing && hljs && renderMathInElement && mermaid) renderRichContent();
+	});
+
+	// Re-apply find highlights after the preview HTML is replaced. The
+	// `bind:innerHTML={sanitizedHtml}` on the article wipes the DOM on every
+	// edit/render pass; without this, highlights vanish until the user
+	// re-types in the find bar.
+	$effect(() => {
+		const _ = sanitizedHtml;
+		if (!findOpen || !findBar) return;
+		tick().then(() => findBar?.reapply());
 	});
 
 	$effect(() => {
@@ -903,7 +958,103 @@ import { t } from './utils/i18n.js';
 		wrapper.classList.toggle('is-collapsed', !isCurrentlyCollapsed);
 	}
 
-	function handleLinkClick(e: MouseEvent) {
+	type RelativeMarkdownTarget = {
+		path: string;
+		hash: string;
+	};
+
+	function decodeLinkPath(path: string) {
+		try {
+			return decodeURIComponent(path);
+		} catch {
+			return path;
+		}
+	}
+
+	function normalizeComparableMarkdownPath(path: string) {
+		const normalized = path.replace(/\\/g, '/');
+		const comparable = normalized.startsWith('//')
+			? `//${normalized.slice(2).replace(/\/+/g, '/')}`
+			: normalized.replace(/\/+/g, '/');
+		if (settings.osType === 'windows' || /^[a-z]:/i.test(comparable) || comparable.startsWith('//')) {
+			return comparable.toLowerCase();
+		}
+		return comparable;
+	}
+
+	function isAbsoluteMarkdownPath(path: string) {
+		return path.startsWith('/') || path.startsWith('\\') || /^[a-z]:/i.test(path);
+	}
+
+	function getRelativeMarkdownTarget(href: string): RelativeMarkdownTarget | null {
+		const pathWithoutHash = href.split('#')[0].split('?')[0];
+		const isMarkdownTarget = hasMarkdownLinkExtension(pathWithoutHash);
+		const isWindowsDrivePath = /^[a-z]:/i.test(href);
+		const isProtocolRelativeExternal = href.startsWith('//');
+		const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(href);
+		if (!isMarkdownTarget || isProtocolRelativeExternal || (hasScheme && !isWindowsDrivePath)) return null;
+
+		const hashIndex = href.indexOf('#');
+		return {
+			path: decodeLinkPath(pathWithoutHash),
+			hash: hashIndex === -1 ? '' : href.slice(hashIndex + 1)
+		};
+	}
+
+	function scrollToAnchor(anchor: string, options: { pushHistory?: boolean } = {}) {
+		let id = decodeLinkPath(anchor);
+		if (id.startsWith('^')) {
+			id = id.substring(1);
+		}
+		const el =
+			(markdownBody?.querySelector(`[id="${CSS.escape(id)}"]`) as HTMLElement | null) ||
+			(markdownBody?.querySelector(`[name="${CSS.escape(id)}"]`) as HTMLElement | null);
+		if (el && markdownBody) {
+			if (options.pushHistory !== false) pushScrollHistory();
+			const containerRect = markdownBody.getBoundingClientRect();
+			const elRect = el.getBoundingClientRect();
+			const targetScrollTop = elRect.top - containerRect.top + markdownBody.scrollTop - 60;
+			markdownBody.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+			return true;
+		}
+		return false;
+	}
+
+	async function scrollToAnchorWhenReady(anchor: string, options: { pushHistory?: boolean } = {}, expectedFile = currentFile) {
+		const baseAttempts = 20;
+		const maxAttempts = 60;
+		for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+			if (expectedFile && currentFile !== expectedFile) return false;
+			await tick();
+			if (scrollToAnchor(anchor, options)) return true;
+			const isFullDocumentLoading = tabManager.activeTabId ? loadingTabs.includes(tabManager.activeTabId) : false;
+			if (attempt >= baseAttempts && !isFullDocumentLoading) return false;
+			await new Promise((resolve) => setTimeout(resolve, attempt < 5 ? 50 : 250));
+		}
+		return false;
+	}
+
+	async function openRelativeMarkdownTarget(target: RelativeMarkdownTarget) {
+		const isAbsoluteTarget = isAbsoluteMarkdownPath(target.path);
+		if (!currentFile && !isAbsoluteTarget) return;
+		const resolved = isAbsoluteTarget ? target.path : resolvePath(currentFile, target.path);
+		if (normalizeComparableMarkdownPath(resolved) === normalizeComparableMarkdownPath(currentFile)) {
+			if (target.hash) {
+				await scrollToAnchorWhenReady(target.hash);
+			} else if (markdownBody) {
+				pushScrollHistory();
+				markdownBody.scrollTo({ top: 0, behavior: 'smooth' });
+			}
+			return;
+		}
+		if (tabManager.activeTabId && !(await canCloseTab(tabManager.activeTabId))) return;
+		await loadMarkdown(resolved, { navigate: true });
+		if (target.hash) {
+			await scrollToAnchorWhenReady(target.hash, { pushHistory: false }, resolved);
+		}
+	}
+
+	async function handleLinkClick(e: MouseEvent) {
 		const target = e.target as HTMLElement;
 
 		// header fold toggle
@@ -956,20 +1107,16 @@ import { t } from './utils/i18n.js';
 			const href = a.getAttribute('href');
 			if (href?.startsWith('#') && href.length > 1) {
 				e.preventDefault();
-				let id = href.substring(1);
-				if (id.startsWith('^')) {
-					id = id.substring(1);
-				}
-				const el =
-					(markdownBody?.querySelector(`[id="${CSS.escape(id)}"]`) as HTMLElement | null) ||
-					(markdownBody?.querySelector(`[name="${CSS.escape(id)}"]`) as HTMLElement | null);
-				if (el && markdownBody) {
-					pushScrollHistory();
-					const containerRect = markdownBody.getBoundingClientRect();
-					const elRect = el.getBoundingClientRect();
-					const targetScrollTop = elRect.top - containerRect.top + markdownBody.scrollTop - 60;
-					markdownBody.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
-				}
+				await scrollToAnchorWhenReady(href.substring(1));
+				return;
+			}
+
+			const relativeMarkdownTarget = href ? getRelativeMarkdownTarget(href) : null;
+			if (relativeMarkdownTarget) {
+				e.preventDefault();
+				e.stopPropagation();
+				await openRelativeMarkdownTarget(relativeMarkdownTarget);
+				return;
 			}
 		}
 
@@ -984,7 +1131,13 @@ import { t } from './utils/i18n.js';
         if (mermaidDiv) {
             const svg = mermaidDiv.querySelector('svg');
             if (svg) {
-                zoomData = { html: svg.outerHTML };
+                // clone and strip fixed dimensions so viewBox governs scaling
+                const clone = svg.cloneNode(true) as SVGElement;
+                clone.removeAttribute('width');
+                clone.removeAttribute('height');
+                clone.style.width = '';
+                clone.style.height = '';
+                zoomData = { html: clone.outerHTML };
                 return;
             }
         }
@@ -1113,69 +1266,132 @@ import { t } from './utils/i18n.js';
 
 		if (!tab.isDirty) return true;
 
+		// Silent save path: only when auto-save is on, the user did NOT ask
+		// for confirmation, and the tab has a real path. Untitled tabs always
+		// need a save dialog, which means the modal flow is the right place
+		// for them. We cancel the pending timer right before the manual save
+		// to avoid a duplicate write from a timer that fires concurrently.
+		if (settings.autoSave && !settings.confirmBeforeSave && tab.path !== '') {
+			cancelPendingAutoSave(tabId);
+			const success = await saveContent(tabId);
+			// Only allow the close if the tab is fully clean afterwards.
+			// `saveContent` resolves true even when post-save `isDirty=true`
+			// (the user typed during the await — TOCTOU) — closing here
+			// would silently drop those new keystrokes.
+			if (success && !tab.isDirty) return true;
+			if (success) {
+				// Save succeeded but the tab is dirty again — let the user
+				// decide via the modal whether to save again, discard, or cancel.
+				addToast(t('toast.savedNewerEdits', settings.language), 'info');
+			} else {
+				// Silent save failed — surface and fall through to the modal.
+				addToast(t('toast.autoSaveFailed', settings.language), 'error');
+			}
+		}
+
 		const response = await askCustom(t('modal.youHaveUnsavedChanges', settings.language).replace('{title}', tab.title), {
-			title: t('modal.unsavedChanges.title'),
+			title: t('modal.unsavedChanges', settings.language),
 			kind: 'warning',
 			showSave: true,
 		});
 
+		// Important: do NOT cancel the pending auto-save timer before this
+		// modal. If the user clicks Cancel, the tab remains dirty and we
+		// want background auto-save to keep firing on the existing schedule.
 		if (response === 'cancel') return false;
 		if (response === 'save') {
-			return await saveContent();
+			cancelPendingAutoSave(tabId);
+			return await saveContent(tabId);
 		}
 
-		return true; // discard
+		// Discard: drop pending save so we don't write what the user just
+		// threw away. The effect will re-arm a timer if the tab gets edited
+		// again.
+		cancelPendingAutoSave(tabId);
+		return true;
 	}
 
-	async function toggleEdit(autoSave = false) {
+	async function toggleEdit(silentSave = false) {
 		const tab = tabManager.activeTab;
 		if (!tab || tab.path === undefined) return;
 
 		if (isEditing) {
 			// Switch back to view
 			if (tab.isDirty && tab.path !== '') {
-				if (autoSave) {
-				const success = await saveContent();
-				if (!success) return; // If save fails, stay in edit mode?
-			} else {
-				const response = await askCustom(t('modal.unsavedChanges.viewMode.message'), {
-					title: t('modal.unsavedChanges.title'),
-					kind: 'warning',
-					showSave: true,
-				});
+				// `confirmBeforeSave` always wins: when the user has asked
+				// for confirmation, every dirty toggle must show the modal,
+				// even if the caller passed `silentSave=true` (hotkey path).
+				const shouldSilent =
+					!settings.confirmBeforeSave && (silentSave || settings.autoSave);
+				if (shouldSilent) {
+					cancelPendingAutoSave(tab.id);
+					const success = await saveContent(tab.id);
+					if (!success) {
+						addToast(t('toast.autoSaveFailed', settings.language), 'error');
+						return; // If save fails, stay in edit mode
+					}
+				} else {
+					const response = await askCustom(t('modal.youHaveUnsavedChangesBeforeReturning', settings.language), {
+						title: t('modal.unsavedChanges', settings.language),
+						kind: 'warning',
+						showSave: true,
+					});
 
+					// Cancel only happens on save / discard. If user picks
+					// Cancel, the pending auto-save timer keeps running.
 					if (response === 'cancel') return;
 					if (response === 'save') {
-						const success = await saveContent();
+						cancelPendingAutoSave(tab.id);
+						const success = await saveContent(tab.id);
 						if (!success) return;
 					} else if (response === 'discard') {
+						cancelPendingAutoSave(tab.id);
 						tab.rawContent = tab.originalContent;
+						tab.isDirty = false;
 					}
 				}
 			}
+			// If `saveContent` left `tab.isDirty=true` (TOCTOU — user typed
+			// during the await), staying in edit mode is the safe default:
+			// a non-editable dirty tab disables auto-save, blocks Cmd+S,
+			// and risks getting clobbered by the next disk reload. Surface
+			// a hint and keep the tab editable.
+			if (tab.path !== '' && tab.isDirty) {
+				addToast(t('toast.savedNewerEdits', settings.language), 'info');
+				return;
+			}
+
 			tab.isEditing = false;
 			if (tab.path !== '') {
-				tab.isDirty = false;
 				await loadMarkdown(tab.path, { preserveEditState: true });
 			} else {
+				// Untitled: render the in-memory buffer for the preview.
 				try {
 					const html = (await invoke('render_markdown', { content: tab.rawContent })) as string;
 					const processedInfo = processMarkdownHtml(html, '', collapsedHeaders);
 					tabManager.updateTabContent(tab.id, processedInfo);
 				} catch (e) {
-					console.error('Failed to render markdown for unsaved file', e);
+					console.error('Failed to render markdown', e);
 				}
 			}
 		} else {
 			// Switch to edit
 			if (tab.path !== '') {
-				try {
-					const content = (await invoke('read_file_content', { path: tab.path })) as string;
-					tab.rawContent = content;
+				if (tab.isDirty) {
+					// Already have unsaved in-memory edits (e.g. from an
+					// earlier session restored from localStorage, or from
+					// post-save TOCTOU). Reading from disk would clobber
+					// them, so just flip into edit mode without a reload.
 					tab.isEditing = true;
-					tab.isDirty = false;
-				} catch (e) {
-					console.error('Failed to read file for editing', e);
+				} else {
+					try {
+						const content = (await invoke('read_file_content', { path: tab.path })) as string;
+						tab.rawContent = content;
+						tab.isEditing = true;
+						tab.isDirty = false;
+					} catch (e) {
+						console.error('Failed to read file for editing', e);
+					}
 				}
 			} else {
 				tab.isEditing = true;
@@ -1183,9 +1399,30 @@ import { t } from './utils/i18n.js';
 		}
 	}
 
-	async function saveContent(): Promise<boolean> {
-		const tab = tabManager.activeTab;
-		if (!tab || (!tab.isEditing && !tab.isSplit)) return false;
+	/**
+	 * Save the given (or active) tab to disk. Returns true on success.
+	 *
+	 * Important details:
+	 * - Operates on a snapshot of `rawContent` taken BEFORE the await, so further
+	 *   keystrokes during the in-flight invoke are not mistakenly marked clean
+	 *   (TOCTOU fix). The dirty flag is recomputed against the snapshot, not
+	 *   forced to false.
+	 * - Marks the destination path as a "self write" so the file-watcher does
+	 *   not bounce the change back into the editor and clobber unsaved input.
+	 * - Untitled tabs (empty path) are NOT silently auto-saved; they require an
+	 *   interactive save dialog (caller must come from a user gesture).
+	 */
+	async function saveContent(tabId?: string): Promise<boolean> {
+		const tab = tabId
+			? tabManager.tabs.find((t) => t.id === tabId)
+			: tabManager.activeTab;
+		if (!tab) return false;
+		// No further gating: explicit user-initiated saves should always
+		// work. Auto-save filters by `path !== '' && (isEditing || isSplit)`
+		// in the effect itself, so untitled or view-mode tabs can only
+		// reach this function through a modal "Save" choice or a hotkey,
+		// both of which are legitimate save triggers — including for
+		// untitled tabs in view mode (e.g. unsaved-changes modal at close).
 
 		let targetPath = tab.path;
 
@@ -1204,17 +1441,25 @@ import { t } from './utils/i18n.js';
 			}
 		}
 
+		const snapshot = tab.rawContent;
+		selfWriteUntilByPath.set(targetPath, Date.now() + SELF_WRITE_GRACE_MS);
+
 		try {
-			await invoke('save_file_content', { path: targetPath, content: tab.rawContent });
+			await invoke('save_file_content', { path: targetPath, content: snapshot });
+			// Refresh the grace window — the watcher event arrives after the write
+			// completes, not when it started.
+			selfWriteUntilByPath.set(targetPath, Date.now() + SELF_WRITE_GRACE_MS);
 			if (tab.path === '') {
 				// We just saved an untitled tab for the first time
 				tabManager.updateTabPath(tab.id, targetPath);
 				saveRecentFile(targetPath);
 			}
-			tab.isDirty = false;
-			tab.originalContent = tab.rawContent;
+			tab.originalContent = snapshot;
+			// If the user kept typing during the await, the buffer is still dirty.
+			tab.isDirty = tab.rawContent !== snapshot;
 			return true;
 		} catch (e) {
+			selfWriteUntilByPath.delete(targetPath);
 			console.error('Failed to save file', e);
 			return false;
 		}
@@ -1233,20 +1478,139 @@ import { t } from './utils/i18n.js';
 		});
 
 		if (selected) {
+			const snapshot = tab.rawContent;
+			selfWriteUntilByPath.set(selected, Date.now() + SELF_WRITE_GRACE_MS);
 			try {
-				await invoke('save_file_content', { path: selected, content: tab.rawContent });
+				await invoke('save_file_content', { path: selected, content: snapshot });
+				selfWriteUntilByPath.set(selected, Date.now() + SELF_WRITE_GRACE_MS);
 				tabManager.updateTabPath(tab.id, selected);
 				saveRecentFile(selected);
-				tab.isDirty = false;
-				tab.originalContent = tab.rawContent;
+				tab.originalContent = snapshot;
+				tab.isDirty = tab.rawContent !== snapshot;
 				return true;
 			} catch (e) {
+				selfWriteUntilByPath.delete(selected);
 				console.error('Failed to save file as', e);
 				return false;
 			}
 		}
 		return false;
 	}
+
+	/**
+	 * Auto-save effect.
+	 *
+	 * Watches every tab in the tab manager. For each tab that is dirty, has a
+	 * non-empty path (untitled files require an explicit Save dialog), and is
+	 * currently editable (edit-mode or split-mode), arms a per-tab debounce
+	 * timer that calls saveContent(tabId) when the typing pause exceeds
+	 * AUTO_SAVE_DEBOUNCE_MS.
+	 *
+	 * Per-tab timers (instead of a single timer keyed off the active tab) mean
+	 * a dirty background tab can still be flushed without the user revisiting
+	 * it — typical scenario when you switch tabs mid-edit.
+	 *
+	 * If `settings.autoSave` flips to false at runtime, all pending timers are
+	 * cancelled and a manual Cmd+S becomes the only path again.
+	 */
+	$effect(() => {
+		// Disable background auto-save in two cases:
+		//   1. The user turned `autoSave` off entirely.
+		//   2. The user enabled `confirmBeforeSave` — the Settings UI label
+		//      promises confirmation before each save, so silent debounced
+		//      writes contradict that contract. With this flag on, saves
+		//      happen only via Cmd+S or via the close/toggle modals.
+		if (!settings.autoSave || settings.confirmBeforeSave) {
+			untrack(() => {
+				for (const t of autoSaveTimers.values()) clearTimeout(t);
+				autoSaveTimers.clear();
+				lastContentRefByTab.clear();
+			});
+			return;
+		}
+
+		// Reactive reads — every keystroke flows through updateTabRawContent,
+		// which assigns a new immutable string to `tab.rawContent`. Capturing
+		// the reference here triggers re-runs on any edit (including
+		// same-length ones like overwrite or formatting toggles).
+		const snapshot = tabManager.tabs.map((tab) => ({
+			id: tab.id,
+			path: tab.path,
+			isDirty: tab.isDirty,
+			editable: tab.isEditing || tab.isSplit,
+			contentRef: tab.rawContent,
+		}));
+
+		untrack(() => {
+			const seenIds = new Set<string>();
+			for (const s of snapshot) {
+				seenIds.add(s.id);
+				const eligible = s.isDirty && s.path !== '' && s.editable;
+				const prevRef = lastContentRefByTab.get(s.id);
+				const refChanged = prevRef !== s.contentRef;
+
+				if (!eligible) {
+					// Tab is no longer dirty / editable / has a path — drop
+					// any pending timer and forget its tick.
+					const existing = autoSaveTimers.get(s.id);
+					if (existing) {
+						clearTimeout(existing);
+						autoSaveTimers.delete(s.id);
+					}
+					lastContentRefByTab.delete(s.id);
+					continue;
+				}
+
+				if (!refChanged && autoSaveTimers.has(s.id)) {
+					// Eligible but no new edit AND a timer is already armed —
+					// leave it alone so background tabs don't get their
+					// debounce reset by foreground typing.
+					continue;
+				}
+
+				// Either content changed, or the tab just became eligible
+				// (e.g. user pressed Save As). (Re)arm the debounce.
+				const existing = autoSaveTimers.get(s.id);
+				if (existing) clearTimeout(existing);
+				lastContentRefByTab.set(s.id, s.contentRef);
+				const timer = setTimeout(() => {
+					autoSaveTimers.delete(s.id);
+					// `saveContent` resolves with a boolean; it does not
+					// reject on save failure, so `.catch` alone hid errors.
+					// Surface failures via toast + console.
+					saveContent(s.id).then(
+						(ok) => {
+							if (!ok) {
+								console.error('Auto-save failed for tab', s.id);
+								addToast(
+									t('toast.autoSaveFailed', settings.language),
+									'error',
+								);
+							}
+						},
+						(e) => {
+							console.error('Auto-save threw for tab', s.id, e);
+							addToast(
+								t('toast.autoSaveFailed', settings.language),
+								'error',
+							);
+						},
+					);
+				}, AUTO_SAVE_DEBOUNCE_MS);
+				autoSaveTimers.set(s.id, timer);
+			}
+			// Tabs that were closed: drop their timers and tick records.
+			for (const id of [...autoSaveTimers.keys()]) {
+				if (!seenIds.has(id)) {
+					clearTimeout(autoSaveTimers.get(id)!);
+					autoSaveTimers.delete(id);
+				}
+			}
+			for (const id of [...lastContentRefByTab.keys()]) {
+				if (!seenIds.has(id)) lastContentRefByTab.delete(id);
+			}
+		});
+	});
 
 	async function exportAsHtml() {
 		const tab = tabManager.activeTab;
@@ -1279,12 +1643,30 @@ import { t } from './utils/i18n.js';
 	}
 
 	async function closeFile() {
-		if (tabManager.activeTabId) {
-			if (await canCloseTab(tabManager.activeTabId)) {
-				tabManager.closeTab(tabManager.activeTabId);
-			}
+		if (!tabManager.activeTabId) {
+			await destroyWindowAfterTabsClosed();
+			return;
 		}
-		if (liveMode && tabManager.tabs.length === 0) invoke('unwatch_file').catch(console.error);
+
+		await closeTabAndWindowIfLast(tabManager.activeTabId);
+	}
+
+	async function closeTabAndWindowIfLast(tabId: string) {
+		if (!(await canCloseTab(tabId))) return;
+
+		tabManager.closeTab(tabId);
+		if (tabManager.tabs.length > 0) return;
+
+		if (liveMode) invoke('unwatch_file').catch(console.error);
+		await destroyWindowAfterTabsClosed();
+	}
+
+	async function destroyWindowAfterTabsClosed() {
+		if (settings.restoreStateOnReopen) {
+			localStorage.setItem('savedTabsData', tabManager.serializeState());
+		}
+
+		await appWindow.destroy();
 	}
 
 	async function openFileLocation() {
@@ -1510,16 +1892,11 @@ import { t } from './utils/i18n.js';
 			if (!rawHref) return;
 
 			if (rawHref.startsWith('#')) return;
-			const isMarkdown = ['.md', '.markdown', '.mdown', '.mkd', '.txt'].some((ext) => {
-				const urlNoHash = rawHref.split('#')[0].split('?')[0];
-				return urlNoHash.toLowerCase().endsWith(ext);
-			});
 
-			if (isMarkdown && !rawHref.match(/^[a-z]+:\/\//i)) {
+			const relativeMarkdownTarget = getRelativeMarkdownTarget(rawHref);
+			if (relativeMarkdownTarget) {
 				event.preventDefault();
-				const urlNoHash = rawHref.split('#')[0].split('?')[0];
-				const resolved = resolvePath(currentFile, urlNoHash);
-				await loadMarkdown(resolved, { navigate: true });
+				await openRelativeMarkdownTarget(relativeMarkdownTarget);
 				return;
 			}
 
@@ -1567,7 +1944,7 @@ import { t } from './utils/i18n.js';
 		}
 	});
 
-	async function toggleSplitView(tabId: string, autoSave = false) {
+	async function toggleSplitView(tabId: string, silentSave = false) {
 		const tab = tabManager.tabs.find((t) => t.id === tabId);
 		if (!tab) return;
 
@@ -1585,30 +1962,50 @@ import { t } from './utils/i18n.js';
 			if (liveMode) toggleLiveMode();
 		} else {
 			if (tab.isDirty && tab.path !== '') {
-				if (autoSave) {
-					const success = await saveContent();
-					if (!success) return;
+				// `confirmBeforeSave` always wins: when the user has asked
+				// for confirmation, every dirty toggle must show the modal,
+				// even if the caller passed `silentSave=true` (hotkey path).
+				const shouldSilent =
+					!settings.confirmBeforeSave && (silentSave || settings.autoSave);
+				if (shouldSilent) {
+					cancelPendingAutoSave(tab.id);
+					const success = await saveContent(tab.id);
+					if (!success) {
+						addToast(t('toast.autoSaveFailed', settings.language), 'error');
+						return;
+					}
 				} else {
-					const response = await askCustom(t('modal.unsavedChanges.splitView.message'), {
-						title: t('modal.unsavedChanges.title'),
+					const response = await askCustom(t('modal.youHaveUnsavedChangesBeforeClosingSplitView', settings.language), {
+						title: t('modal.unsavedChanges', settings.language),
 						kind: 'warning',
 						showSave: true,
 					});
 
+					// Cancel keeps the pending auto-save timer alive.
 					if (response === 'cancel') return;
 					if (response === 'save') {
-						const success = await saveContent();
+						cancelPendingAutoSave(tab.id);
+						const success = await saveContent(tab.id);
 						if (!success) return;
 					} else if (response === 'discard') {
+						cancelPendingAutoSave(tab.id);
 						tab.rawContent = tab.originalContent;
+						tab.isDirty = false;
 					}
 				}
 			}
+			// Same TOCTOU guard as toggleEdit: if the user typed during
+			// the save, the tab is still dirty. Keep it in split mode so
+			// auto-save keeps firing and Cmd+S still works on it; flipping
+			// it out would make a non-editable dirty tab.
+			if (tab.path !== '' && tab.isDirty) {
+				addToast(t('toast.savedNewerEdits', settings.language), 'info');
+				return;
+			}
+
 			tabManager.setSplitEnabled(tab.id, false);
 			if (tab.path !== '') {
-				tab.isDirty = false;
 				await loadMarkdown(tab.path);
-			} else {
 			}
 		}
 	}
@@ -1619,6 +2016,18 @@ import { t } from './utils/i18n.js';
 		const cmdOrCtrl = e.ctrlKey || e.metaKey;
 		const key = e.key.toLowerCase();
 		const code = e.code;
+
+		// On macOS the native menu accelerators (⌘T, ⌘W, ⌘S, ⌘Q) take priority
+		// via NSMenu; the JS keydown handler should not also fire for them, or
+		// we'd double-handle (e.g. open two new tabs on ⌘T). The !e.shiftKey
+		// guards keep ⌘⇧T (undo close tab) routed through this handler as
+		// before — only the bare combos are claimed by the menu.
+		if (settings.osType === 'macos' && cmdOrCtrl && !e.shiftKey) {
+			if (key === 'q') return; // → menu-app-quit
+			if (key === 'w') return; // → menu-file-close
+			if (key === 's') return; // → menu-file-save
+			if (key === 't') return; // → menu-file-new
+		}
 
 		const isSplit = tabManager.activeTab?.isSplit;
 
@@ -1636,9 +2045,9 @@ import { t } from './utils/i18n.js';
 				getCurrentWindow().close();
 			});
 		}
-		if (cmdOrCtrl && key === 'h') {
+		if (cmdOrCtrl && !e.shiftKey && !e.altKey && (code === 'Backslash' || code === 'IntlBackslash')) {
 			e.preventDefault();
-			if (tabManager.activeTabId) toggleSplitView(tabManager.activeTabId);
+			if (tabManager.activeTabId) toggleSplitView(tabManager.activeTabId, true);
 		}
 		if (cmdOrCtrl && key === 'e') {
 			e.preventDefault();
@@ -1691,6 +2100,18 @@ import { t } from './utils/i18n.js';
 			e.preventDefault();
 			showSettings = !showSettings;
 		}
+		// Ctrl/Cmd+F: route to either Monaco's built-in find or the preview
+		// FindBar depending on focus and which panes are visible. We only
+		// preventDefault when we actually take the action ourselves —
+		// otherwise we let Monaco's own keybinding fire.
+		if (cmdOrCtrl && !e.shiftKey && !e.altKey && key === 'f') {
+			const active = document.activeElement as Node | null;
+			const editorHasFocus = !!editorPaneEl && !!active && editorPaneEl.contains(active);
+			if (!editorHasFocus) {
+				e.preventDefault();
+				triggerFindAction();
+			}
+		}
 	}
 
 	function pushScrollHistory() {
@@ -1713,7 +2134,9 @@ import { t } from './utils/i18n.js';
 				markdownBody.scrollTo({ top: pos, behavior: 'smooth' });
 			} else if (tabManager.activeTabId) {
 				const path = tabManager.goBack(tabManager.activeTabId);
-				if (path) loadMarkdown(path, { skipTabManagement: true });
+				if (path) {
+					loadMarkdown(path, { skipTabManagement: true, resetScrollHistory: true });
+				}
 			}
 		} else if (e.button === 4) {
 			// Forward
@@ -1725,7 +2148,9 @@ import { t } from './utils/i18n.js';
 				markdownBody.scrollTo({ top: pos, behavior: 'smooth' });
 			} else if (tabManager.activeTabId) {
 				const path = tabManager.goForward(tabManager.activeTabId);
-				if (path) loadMarkdown(path, { skipTabManagement: true });
+				if (path) {
+					loadMarkdown(path, { skipTabManagement: true, resetScrollHistory: true });
+				}
 			}
 		}
 	}
@@ -1872,7 +2297,16 @@ import { t } from './utils/i18n.js';
 			);
 			unlisteners.push(
 				await listen('file-changed', () => {
-					if (liveMode && currentFile) loadMarkdown(currentFile);
+					if (!liveMode || !currentFile) return;
+					// Skip events caused by our own auto-save / save invocations,
+					// otherwise the reload would clobber any keystrokes that landed
+					// between fs::write and this listener firing.
+					const until = selfWriteUntilByPath.get(currentFile);
+					if (until !== undefined) {
+						if (Date.now() < until) return;
+						selfWriteUntilByPath.delete(currentFile);
+					}
+					loadMarkdown(currentFile);
 				}),
 			);
 
@@ -1890,6 +2324,11 @@ import { t } from './utils/i18n.js';
 			unlisteners.push(
 				await listen('menu-edit-file', () => {
 					toggleEdit();
+				}),
+			);
+			unlisteners.push(
+				await listen('menu-edit-find', () => {
+					triggerFindAction();
 				}),
 			);
 			unlisteners.push(
@@ -1929,9 +2368,7 @@ import { t } from './utils/i18n.js';
 			unlisteners.push(
 				await listen('menu-tab-close', async (event) => {
 					const tabId = event.payload as string;
-					if (await canCloseTab(tabId)) {
-						tabManager.closeTab(tabId);
-					}
+					await closeTabAndWindowIfLast(tabId);
 				}),
 			);
 			unlisteners.push(
@@ -1952,9 +2389,49 @@ import { t } from './utils/i18n.js';
 				}),
 			);
 			unlisteners.push(
+				await listen('menu-check-updates', () => {
+					updateStore.openDialog();
+				}),
+			);
+			// Native macOS menubar — Markpad ▸ Quit and File ▸ * — bridged
+			// to the same handlers the in-window burger button uses, so the
+			// menu and the burger stay behaviourally identical. Save mirrors
+			// the keydown guard (`isEditing || isSplit`) so menu ⌘S in pure
+			// view mode is a no-op, matching the keyboard shortcut.
+			unlisteners.push(await listen('menu-app-quit',         () => appExit()));
+			unlisteners.push(await listen('menu-file-new',         () => handleNewFile()));
+			unlisteners.push(await listen('menu-file-open',        () => selectFile()));
+			unlisteners.push(await listen('menu-file-close',       () => closeFile()));
+			unlisteners.push(await listen('menu-file-save',        () => {
+				if (isEditing || tabManager.activeTab?.isSplit) saveContent();
+			}));
+			unlisteners.push(await listen('menu-file-save-as',     () => saveContentAs()));
+			unlisteners.push(await listen('menu-file-export-html', () => exportAsHtml()));
+			unlisteners.push(await listen('menu-file-export-pdf', () => exportAsPdf()));
+			unlisteners.push(
 				await appWindow.onCloseRequested(async (event) => {
 					console.log('onCloseRequested triggered');
 					if (isForceExiting) return;
+
+					// CRITICAL: before serializing tab state to localStorage
+					// (the restore-on-reopen path), make sure all pending
+					// auto-save edits are actually flushed to disk. Without
+					// this, closing the window with auto-save on but
+					// confirmBeforeSave off would silently put unsaved edits
+					// in localStorage only and never persist them to file.
+					if (settings.autoSave && !settings.confirmBeforeSave) {
+						const dirtyWithPath = tabManager.tabs.filter(
+							(t) => t.isDirty && t.path !== '',
+						);
+						for (const tab of dirtyWithPath) {
+							cancelPendingAutoSave(tab.id);
+							try {
+								await saveContent(tab.id);
+							} catch (e) {
+								console.error('Flush-on-close save failed for tab', tab.id, e);
+							}
+						}
+					}
 
 					if (settings.restoreStateOnReopen) {
 						try {
@@ -1971,6 +2448,34 @@ import { t } from './utils/i18n.js';
 					if (dirtyTabs.length > 0) {
 						console.log('Preventing default close');
 				event.preventDefault();
+
+				// Auto-save without confirmation: try silently saving every dirty
+				// tab that has a real path. If untitled tabs exist they need a
+				// Save dialog, so we just fall through to the modal — that is
+				// NOT a failure case and shouldn't show an error toast. We
+				// also DON'T clear pending timers up front: if the user picks
+				// Cancel in the modal below, we want the timers to keep
+				// running for tabs that are still dirty.
+				if (settings.autoSave && !settings.confirmBeforeSave) {
+					const tabsWithPath = dirtyTabs.filter((t) => t.path !== '');
+					const hasUntitled = dirtyTabs.some((t) => t.path === '');
+					if (!hasUntitled) {
+						let allOk = true;
+						for (const tab of tabsWithPath) {
+							cancelPendingAutoSave(tab.id);
+							const ok = await saveContent(tab.id);
+							if (!ok) { allOk = false; break; }
+						}
+						if (allOk) {
+							appWindow.close();
+							return;
+						}
+						// A real save failure happened — surface it.
+						addToast(t('toast.autoSaveFailed', settings.language), 'error');
+					}
+					// hasUntitled: skip toast, just fall through to the modal.
+				}
+
 				const response = await askCustom(t('modal.youHaveUnsavedFiles', settings.language).replace('{{count}}', dirtyTabs.length.toString()), {
 											title: t('modal.unsavedChanges', settings.language),
 					kind: 'warning',
@@ -1982,7 +2487,8 @@ import { t } from './utils/i18n.js';
 							for (const tab of dirtyTabs) {
 								tabManager.setActive(tab.id);
 								await tick();
-								const saved = await saveContent();
+								cancelPendingAutoSave(tab.id);
+								const saved = await saveContent(tab.id);
 								if (!saved) return; // Cancelled or failed
 							}
 							// If all saved successfully, close the app
@@ -2041,8 +2547,7 @@ import { t } from './utils/i18n.js';
 							});
 						} else if (dragTarget === 'preview' || (!isSplit && !isEditing)) {
 							paths.forEach(path => {
-								const ext = path.split('.').pop()?.toLowerCase();
-								if (ext && ['md', 'markdown', 'txt'].includes(ext)) {
+								if (hasMarkdownLinkExtension(path)) {
 									loadMarkdown(path);
 								} else {
 									const filename = path.split(/[\/\\]/).pop() || 'File';
@@ -2120,11 +2625,8 @@ import { t } from './utils/i18n.js';
 		{theme}
 		onSetTheme={(t) => (theme = t)}
 		onopenSettings={() => (showSettings = true)}
-		oncloseTab={(id) => {
-			canCloseTab(id).then((can) => {
-				if (can) tabManager.closeTab(id);
-			});
-		}} />
+		onfind={triggerFindAction}
+		oncloseTab={closeTabAndWindowIfLast} />
 	<div class="loading-screen">
 		<svg class="spinner" viewBox="0 0 50 50">
 			<circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"></circle>
@@ -2167,11 +2669,8 @@ import { t } from './utils/i18n.js';
 		{theme}
 		onSetTheme={(t) => (theme = t)}
 		onopenSettings={() => (showSettings = true)}
-		oncloseTab={(id) => {
-			canCloseTab(id).then((can) => {
-				if (can) tabManager.closeTab(id);
-			});
-		}} />
+		onfind={triggerFindAction}
+		oncloseTab={closeTabAndWindowIfLast} />
 
 	<Settings show={showSettings} {theme} onSetTheme={(t) => (theme = t)} onclose={() => (showSettings = false)} />
 
@@ -2226,13 +2725,19 @@ import { t } from './utils/i18n.js';
 						class="pane viewer-pane" 
 						class:active={!isEditing || isSplit} 
 						style="flex: {isSplit ? 1 - tabManager.activeTab.splitRatio : (!isEditing) ? 1 : 0}">
-						
+
+						<FindBar
+							bind:this={findBar}
+							bind:open={findOpen}
+							{markdownBody}
+							language={settings.language} />
+
 						<div class="viewer-content">
 							<article
 								bind:this={markdownBody}
 								contenteditable="false"
 								class="markdown-body {isFullWidth ? 'full-width' : ''} {settings.showToc ? 'toc-active' : ''}"
-								bind:innerHTML={htmlContent}
+								bind:innerHTML={sanitizedHtml}
 								onscroll={handleScroll}
 								onclick={handleLinkClick}
 								onkeydown={(e) => { if(e.key === 'Enter' || e.key === ' ') handleLinkClick(e as unknown as MouseEvent); }}
@@ -2285,7 +2790,7 @@ import { t } from './utils/i18n.js';
 								class:on-right={settings.tocSide === 'right'}>
 								<Toc 
 										{markdownBody} 
-										{htmlContent} 
+										htmlContent={sanitizedHtml}
 										onBeforeJump={pushScrollHistory} 
 										{collapsedHeaders} 
 										ontoggleFold={toggleFold} 
@@ -2361,6 +2866,8 @@ import { t } from './utils/i18n.js';
 		onsave={handleModalSave}
 		oncancel={handleModalCancel} />
 
+	<UpdateDialog />
+
 	<div class="toast-container">
 		{#each toasts as toast (toast.id)}
 			<Toast 
@@ -2421,11 +2928,14 @@ import { t } from './utils/i18n.js';
 		box-sizing: border-box;
 		min-width: 200px;
 		margin: 0;
-		padding: 50px clamp(calc(calc(50% - 390px)), 5vw, 50px);
+		padding: 50px clamp(24px, 5vw, 50px);
 		height: 100%;
 		overflow-y: auto;
 		overflow-x: hidden;
 		transform: translate3d(0, 0, 0);
+		max-width: 100%;
+		text-align: left;
+		overflow-wrap: anywhere;
 	}
 
 	.loading-chip {
@@ -2479,7 +2989,7 @@ import { t } from './utils/i18n.js';
 	}
 
 	.markdown-body.full-width {
-		padding: 50px;
+		padding: 50px clamp(24px, 5vw, 50px);
 		max-width: 100%;
 	}
 

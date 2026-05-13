@@ -95,6 +95,8 @@ function processInlineMath(root: Element) {
 		acceptNode(node) {
 			let curr = node.parentElement;
 			while (curr && curr !== root) {
+				if (curr.hasAttribute("data-math"))
+					return NodeFilter.FILTER_REJECT;
 				if (["CODE", "PRE", "SCRIPT", "STYLE"].includes(curr.tagName))
 					return NodeFilter.FILTER_REJECT;
 				curr = curr.parentElement;
@@ -105,17 +107,142 @@ function processInlineMath(root: Element) {
 
 	const toReplace: { node: Text; newText: string }[] = [];
 	let node: Node | null;
-	const regex = /(^|[^\\])\$(?!\s)([^$]*?[^\s\\])\$(?![\d])/g;
 	while ((node = walker.nextNode())) {
 		const text = (node as Text).nodeValue || "";
 		if (text.includes("$")) {
-			const newText = text.replace(regex, "$1\\($2\\)");
+			const newText = convertInlineMathDelimiters(text);
 			if (newText !== text) toReplace.push({ node: node as Text, newText });
 		}
 	}
 	for (const { node, newText } of toReplace) {
 		node.nodeValue = newText;
 	}
+}
+
+function processDisplayMathBlocks(root: Element, doc: Document) {
+	for (const element of Array.from(root.querySelectorAll("p, li"))) {
+		const math = extractDisplayMathBlock(element);
+		if (!math) continue;
+
+		element.setAttribute("data-math", "display");
+		element.setAttribute("data-math-source", math);
+		element.replaceChildren(doc.createTextNode(math));
+	}
+}
+
+function extractDisplayMathBlock(element: Element): string | null {
+	let text = "";
+	let previousWasBreak = false;
+
+	for (const child of Array.from(element.childNodes)) {
+		if (child.nodeType === Node.TEXT_NODE) {
+			let value = child.nodeValue || "";
+			if (previousWasBreak) value = value.replace(/^\n+/, "");
+			text += value;
+			previousWasBreak = false;
+		} else if (
+			child.nodeType === Node.ELEMENT_NODE &&
+			(child as Element).tagName === "BR"
+		) {
+			text += "\n";
+			previousWasBreak = true;
+		} else {
+			return null;
+		}
+	}
+
+	const trimmed = text.trim();
+	if (!trimmed.startsWith("$$") || !trimmed.endsWith("$$")) return null;
+
+	const math = trimmed.slice(2, -2).trim();
+	return math ? math : null;
+}
+
+function convertInlineMathDelimiters(text: string): string {
+	const parts: string[] = [];
+	let index = 0;
+	// Allows adjacent inline spans like `$a$$b$` without treating `$$` display
+	// delimiters as inline math openings.
+	let previousDollarAllowsInlineOpen = false;
+
+	while (index < text.length) {
+		const char = text[index];
+		if (char !== "$") {
+			parts.push(char);
+			previousDollarAllowsInlineOpen = false;
+			index += 1;
+			continue;
+		}
+
+		if (text[index - 1] !== "\\" && text[index + 1] === "$") {
+			const displayEnd = findDisplayMathEnd(text, index + 2);
+			if (displayEnd !== -1) {
+				parts.push(text.slice(index, displayEnd + 2));
+				previousDollarAllowsInlineOpen = true;
+				index = displayEnd + 2;
+				continue;
+			}
+
+			parts.push("$$");
+			previousDollarAllowsInlineOpen = false;
+			index += 2;
+			continue;
+		}
+
+		if (
+			text[index - 1] === "\\" ||
+			(text[index - 1] === "$" && !previousDollarAllowsInlineOpen) ||
+			/\s/.test(text[index + 1] || "")
+		) {
+			parts.push(char);
+			previousDollarAllowsInlineOpen = false;
+			index += 1;
+			continue;
+		}
+
+		const end = findInlineMathEnd(text, index + 1);
+		if (end === -1) {
+			parts.push(char);
+			previousDollarAllowsInlineOpen = false;
+			index += 1;
+			continue;
+		}
+
+		parts.push(`\\(${text.slice(index + 1, end)}\\)`);
+		index = end + 1;
+		previousDollarAllowsInlineOpen = true;
+	}
+
+	return parts.join("");
+}
+
+function findDisplayMathEnd(text: string, start: number): number {
+	for (let index = start; index < text.length - 1; index += 1) {
+		if (
+			text[index] === "$" &&
+			text[index + 1] === "$" &&
+			text[index - 1] !== "\\"
+		) {
+			return index;
+		}
+	}
+	return -1;
+}
+
+function findInlineMathEnd(text: string, start: number): number {
+	for (let index = start; index < text.length; index += 1) {
+		if (text[index] !== "$") continue;
+		// Escaped dollars are math content, not closing delimiters.
+		if (text[index - 1] === "\\") continue;
+
+		const beforeEnd = text[index - 1] || "";
+		const afterEnd = text[index + 1] || "";
+		// A following `$` may open an adjacent inline span; the outer loop handles it.
+		if (/\s/.test(beforeEnd) || /\d/.test(afterEnd)) return -1;
+
+		return index;
+	}
+	return -1;
 }
 
 function processBlockIds(root: Element, doc: Document) {
@@ -184,36 +311,155 @@ function processBlockIds(root: Element, doc: Document) {
 	}
 }
 
+const taskTextBoundaryTags = new Set([
+	"ADDRESS",
+	"ARTICLE",
+	"ASIDE",
+	"BLOCKQUOTE",
+	"DD",
+	"DETAILS",
+	"DIALOG",
+	"DIV",
+	"DL",
+	"DT",
+	"FIELDSET",
+	"FIGCAPTION",
+	"FIGURE",
+	"FOOTER",
+	"FORM",
+	"H1",
+	"H2",
+	"H3",
+	"H4",
+	"H5",
+	"H6",
+	"HEADER",
+	"HR",
+	"LI",
+	"MAIN",
+	"NAV",
+	"OL",
+	"P",
+	"PRE",
+	"SECTION",
+	"TABLE",
+	"UL",
+]);
+
+function stripLeadingWhitespace(nodes: Node[]) {
+	for (let index = 0; index < nodes.length; ) {
+		const node = nodes[index];
+		if (node.nodeType !== 3) break;
+
+		const trimmed = node.textContent?.replace(/^\s+/, "") || "";
+		if (trimmed) {
+			node.textContent = trimmed;
+			break;
+		}
+		node.parentNode?.removeChild(node);
+		nodes.splice(index, 1);
+	}
+}
+
+function isWhitespaceText(node: Node) {
+	return node.nodeType === 3 && !node.textContent?.trim();
+}
+
+function startsWithNode(element: Element, target: Node) {
+	const firstContentNode = Array.from(element.childNodes).find(
+		(node) => !isWhitespaceText(node),
+	);
+	return firstContentNode === target;
+}
+
+function isTaskCheckbox(input: Element, li: Element) {
+	const looksRenderedByTaskList =
+		input.hasAttribute("data-task-checkbox") ||
+		li.classList.contains("task-list-item");
+	if (!looksRenderedByTaskList) return false;
+
+	const inputParent = input.parentElement;
+	if (inputParent === li) {
+		return startsWithNode(li, input);
+	}
+
+	return (
+		inputParent?.tagName === "P" &&
+		inputParent.parentElement === li &&
+		startsWithNode(li, inputParent) &&
+		startsWithNode(inputParent, input)
+	);
+}
+
 function processTaskItems(root: Element) {
 	for (const input of Array.from(
 		root.querySelectorAll('li input[type="checkbox"]'),
 	)) {
+		const li = input.closest("li");
+		if (!li) continue;
+		if (!isTaskCheckbox(input, li)) continue;
+
 		input.setAttribute("data-task-checkbox", "");
 		input.removeAttribute("disabled");
 		(input as HTMLInputElement).style.cursor = "pointer";
 
-		const li = input.closest("li");
-		if (!li) continue;
+		const inputParagraph = input.parentElement;
+		if (inputParagraph?.tagName === "P" && inputParagraph.parentElement === li) {
+			li.insertBefore(input, inputParagraph);
+		}
 
 		const nodes = Array.from(li.childNodes);
 		const inputIdx = nodes.indexOf(input);
+		if (inputIdx === -1) continue;
 		const afterInput = nodes.slice(inputIdx + 1);
 
-		const inlineNodes = [];
+		const inlineNodes: Node[] = [];
+		let paragraphNode: Element | null = null;
 		for (const n of afterInput) {
-			if (
-				n.nodeType === 1 &&
-				["P", "DIV", "UL", "OL"].includes((n as Element).tagName)
-			)
+			if (n.nodeType === 3 && !n.textContent?.trim()) {
+				inlineNodes.push(n);
+				continue;
+			}
+
+			if (n.nodeType === 1 && taskTextBoundaryTags.has((n as Element).tagName)) {
+				const onlyLeadingWhitespace = inlineNodes.every(
+					(node) => node.nodeType === 3 && !node.textContent?.trim(),
+				);
+				if ((n as Element).tagName === "P" && onlyLeadingWhitespace) {
+					paragraphNode = n as Element;
+				}
 				break;
+			}
 			inlineNodes.push(n);
 		}
 
-		if (inlineNodes.length > 0) {
+		const hasInlineText = inlineNodes.some(
+			(n) => n.nodeType !== 3 || n.textContent?.trim(),
+		);
+		if (paragraphNode) {
+			stripLeadingWhitespace(inlineNodes);
+			const paragraphChildren = Array.from(paragraphNode.childNodes);
+			const hasParagraphText = paragraphChildren.some(
+				(n) => n.nodeType !== 3 || n.textContent?.trim(),
+			);
+			if (!hasParagraphText) {
+				paragraphNode.remove();
+			} else {
+				stripLeadingWhitespace(paragraphChildren);
+				const wrapper = root.ownerDocument!.createElement("span");
+				wrapper.className = "task-text";
+				for (const n of paragraphChildren) wrapper.appendChild(n);
+				paragraphNode.replaceWith(wrapper);
+			}
+		} else if (hasInlineText) {
+			const insertBeforeNode = afterInput[inlineNodes.length] || null;
+			stripLeadingWhitespace(inlineNodes);
 			const wrapper = root.ownerDocument!.createElement("span");
 			wrapper.className = "task-text";
 			for (const n of inlineNodes) wrapper.appendChild(n);
-			li.insertBefore(wrapper, afterInput[inlineNodes.length] || null);
+			li.insertBefore(wrapper, insertBeforeNode);
+		} else {
+			stripLeadingWhitespace(inlineNodes);
 		}
 
 		if ((input as HTMLInputElement).checked) {
@@ -430,6 +676,7 @@ export function processMarkdownHtml(
 		}
 	}
 
+	processDisplayMathBlocks(doc.body, doc);
 	processBlockIds(doc.body, doc);
 	processTaskItems(doc.body);
 	processInlineMath(doc.body);
@@ -598,11 +845,12 @@ export async function renderRichContent(
 	}
 
 	if (katex) {
-		const mathElements = markdownBody.querySelectorAll("span[data-math]");
+		const mathElements = markdownBody.querySelectorAll("[data-math]");
 		for (const el of Array.from(mathElements)) {
 			const isDisplay = el.getAttribute("data-math") === "display";
+			const mathSource = el.getAttribute("data-math-source") || el.textContent || "";
 			try {
-				katex.render(el.textContent || "", el as HTMLElement, {
+				katex.render(mathSource, el as HTMLElement, {
 					displayMode: isDisplay,
 					throwOnError: false,
 				});
