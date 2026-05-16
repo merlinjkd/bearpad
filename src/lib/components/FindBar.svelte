@@ -30,10 +30,13 @@
 
 	function isHostElement(el: Element | null): boolean {
 		if (!el) return false;
+		// Skip elements whose text is not user-visible (script/style/noscript)
+		// and our own find marks (to avoid re-walking already-highlighted text).
+		// CODE and PRE intentionally NOT skipped: code blocks contain real
+		// content the user expects to be searchable, even when highlight.js
+		// has wrapped tokens in nested <span>s.
 		const tag = el.tagName;
 		return (
-			tag === 'CODE' ||
-			tag === 'PRE' ||
 			tag === 'SCRIPT' ||
 			tag === 'STYLE' ||
 			tag === 'NOSCRIPT' ||
