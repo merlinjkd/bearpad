@@ -115,7 +115,6 @@ jobs:
       # --- Windows Build (x64) ---
       - name: Build Windows x64
         if: matrix.platform == 'windows-latest' && matrix.arch == 'x64'
-        env:
         run: npm run tauri build
 
       - name: Upload Windows x64 Artifacts
@@ -156,7 +155,6 @@ jobs:
       # --- Windows Build (ARM64) ---
       - name: Build Windows ARM64
         if: matrix.platform == 'windows-latest' && matrix.arch == 'arm64'
-        env:
         run: npm run tauri build -- --target aarch64-pc-windows-msvc
 
       - name: Upload Windows ARM64 Artifacts
@@ -183,7 +181,6 @@ jobs:
 
       - name: Build Linux
         if: matrix.platform == 'ubuntu-24.04'
-        env:
         run: npm run tauri build
 
       - name: Upload Linux Artifacts
