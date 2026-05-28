@@ -116,8 +116,6 @@ jobs:
       - name: Build Windows x64
         if: matrix.platform == 'windows-latest' && matrix.arch == 'x64'
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri build
 
       - name: Upload Windows x64 Artifacts
@@ -159,8 +157,6 @@ jobs:
       - name: Build Windows ARM64
         if: matrix.platform == 'windows-latest' && matrix.arch == 'arm64'
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri build -- --target aarch64-pc-windows-msvc
 
       - name: Upload Windows ARM64 Artifacts
@@ -188,8 +184,6 @@ jobs:
       - name: Build Linux
         if: matrix.platform == 'ubuntu-24.04'
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri build
 
       - name: Upload Linux Artifacts
@@ -233,8 +227,6 @@ jobs:
         env:
           # Fix OOM issue
           NODE_OPTIONS: "--max-old-space-size=8192"
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri build -- --target universal-apple-darwin
 
       - name: Upload MacOS Artifacts
@@ -252,7 +244,7 @@ jobs:
     runs-on: ubuntu-latest
     # Run even when one matrix leg failed (the existing sig_count > 0 sanity
     # check inside still gates publication on at least one platform succeeding).
-    if: ${{ always() && needs.create-release.result == 'success' }}
+    if: false
     steps:
       - name: Generate latest.json
         env:
