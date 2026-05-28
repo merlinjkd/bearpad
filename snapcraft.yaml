@@ -1,6 +1,6 @@
-name: markpad
-title: Markpad
-adopt-info: markpad
+name: bearpad
+title: Bearpad
+adopt-info: bearpad
 icon: src-tauri/icons/128x128.png
 summary: The Notepad equivalent for Markdown
 description: |
@@ -24,19 +24,19 @@ description: |
   -   Free and open-source
   -   Lightweight native UI
 license: BSD-3-Clause
-website: https://markpad.sftwr.dev
+website: https://bearpad.sftwr.dev
 donation: https://github.com/sponsors/alecdotdev
-source-code: https://github.com/alecdotdev/Markpad
-issues: https://github.com/alecdotdev/Markpad/issues
+source-code: https://github.com/merlinjkd/bearpad
+issues: https://github.com/merlinjkd/bearpad/issues
 
 confinement: strict
 base: core24
 grade: stable
 
 apps:
-  markpad:
-    command: bin/markpad
-    desktop: usr/share/applications/markpad.desktop
+  bearpad:
+    command: bin/bearpad
+    desktop: usr/share/applications/bearpad.desktop
     extensions: [gnome]
     plugs:
       - network
@@ -45,7 +45,7 @@ apps:
       - home
 
 parts:
-  markpad:
+  bearpad:
     plugin: rust
     source: .
     build-packages:
@@ -72,20 +72,20 @@ parts:
       npx tauri build --no-bundle
       
       # The binary is built in src-tauri/target/release/
-      install -D -m755 src-tauri/target/release/Markpad $CRAFT_PART_INSTALL/bin/markpad
+      install -D -m755 src-tauri/target/release/Bearpad $CRAFT_PART_INSTALL/bin/bearpad
       
       # Install the icon
-      install -D -m644 src-tauri/icons/128x128.png $CRAFT_PART_INSTALL/usr/share/icons/hicolor/128x128/apps/markpad.png
-      install -D -m644 src-tauri/icons/32x32.png $CRAFT_PART_INSTALL/usr/share/icons/hicolor/32x32/apps/markpad.png
+      install -D -m644 src-tauri/icons/128x128.png $CRAFT_PART_INSTALL/usr/share/icons/hicolor/128x128/apps/bearpad.png
+      install -D -m644 src-tauri/icons/32x32.png $CRAFT_PART_INSTALL/usr/share/icons/hicolor/32x32/apps/bearpad.png
       
       # Install the desktop file
-      cat << EOF > markpad.desktop
+      cat << EOF > bearpad.desktop
       [Desktop Entry]
-      Name=Markpad
-      Exec=markpad
-      Icon=markpad
+      Name=Bearpad
+      Exec=bearpad
+      Icon=bearpad
       Type=Application
       Categories=Utility;TextEditor;
       MimeType=text/markdown;text/plain;
       EOF
-      install -D -m644 markpad.desktop $CRAFT_PART_INSTALL/usr/share/applications/markpad.desktop
+      install -D -m644 bearpad.desktop $CRAFT_PART_INSTALL/usr/share/applications/bearpad.desktop

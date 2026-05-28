@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>bearpad-app</id>
+    <version>$version$</version>
+    <title>Bearpad</title>
+    <authors>alecdotdev</authors>
+    <description>The Notepad equivalent for Markdown</description>
+    <tags>markdown viewer tauri sveltekit editor notepad text-editor</tags>
+    <projectUrl>https://github.com/merlinjkd/bearpad</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/merlinjkd/bearpad/master/src-tauri/icons/128x128.png</iconUrl>
+    <licenseUrl>https://github.com/merlinjkd/bearpad/blob/master/LICENSE</licenseUrl>
+    <packageSourceUrl>https://github.com/merlinjkd/bearpad/tree/master/packaging/choco</packageSourceUrl>
+    <releaseNotes>https://github.com/merlinjkd/bearpad/releases</releaseNotes>
+    <summary>A fast and lightweight Markdown viewer and editor</summary>
+    <projectSourceUrl>https://github.com/merlinjkd/bearpad</projectSourceUrl>
+    <bugTrackerUrl>https://github.com/merlinjkd/bearpad/issues</bugTrackerUrl>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

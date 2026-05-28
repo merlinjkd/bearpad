@@ -1,6 +1,6 @@
 # Feature Test Document
 
-A comprehensive sample document to test all (new) Markpad features.
+A comprehensive sample document to test all (new) Bearpad features.
 
 ---
 

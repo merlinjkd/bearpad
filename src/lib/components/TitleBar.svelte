@@ -427,8 +427,8 @@
 						onclick={() => {
 							homeMenuOpen = false;
 							import('@tauri-apps/plugin-opener')
-								.then((m) => m.openUrl('https://github.com/alecdotdev/Markpad'))
-								.catch(() => window.open('https://github.com/alecdotdev/Markpad', '_blank'));
+								.then((m) => m.openUrl('https://github.com/merlinjkd/bearpad'))
+								.catch(() => window.open('https://github.com/merlinjkd/bearpad', '_blank'));
 						}}>
 						v{appVersion}
 					</button>

@@ -1,13 +1,13 @@
 <div align="center">
-  <img src="src-tauri/icons/128x128.png" width="128" alt="Markpad Icon" />
-  <h1>Markpad</h1>
+  <img src="src-tauri/icons/128x128.png" width="128" alt="Bearpad Icon" />
+  <h1>Bearpad</h1>
   <p><b>The Notepad equivalent for Markdown</b></p>
   
-  [![GitHub Release](https://img.shields.io/github/v/release/alecdotdev/Markpad?style=flat-square)](https://github.com/alecdotdev/Markpad/releases/latest)
+  [![GitHub Release](https://img.shields.io/github/v/release/merlinjkd/bearpad?style=flat-square)](https://github.com/merlinjkd/bearpad/releases/latest)
 
   <p>A lightweight, minimalist Markdown viewer and text editor built for productivity across Windows, macOS, and Linux.</p>
 
-  <a href="https://markpad.dev">Website</a> // <a href="https://github.com/alecdotdev/Markpad/releases/latest">Download Latest Release</a> // <a href="https://github.com/alecdotdev/Markpad/issues">Report a Bug</a>
+  <a href="https://bearpad.dev">Website</a> // <a href="https://github.com/merlinjkd/bearpad/releases/latest">Download Latest Release</a> // <a href="https://github.com/merlinjkd/bearpad/issues">Report a Bug</a>
 </div>
 
 <br />
@@ -45,35 +45,35 @@
 #### Windows (Chocolatey)
 
 ```powershell
-choco install markpad-app --version=2.5.0 # version flag is temporary for now
+choco install bearpad-app --version=2.5.0 # version flag is temporary for now
 ```
 
 #### Linux (Snap)
 
 ```bash
-sudo snap install markpad 
+sudo snap install bearpad 
 ```
 
 ### Direct Download
 
-Download the latest executable or installer from the [releases page](https://github.com/alecdotdev/Markpad/releases/latest) or from [markpad.sftwr.dev](https://markpad.sftwr.dev)
+Download the latest executable or installer from the [releases page](https://github.com/merlinjkd/bearpad/releases/latest) or from [bearpad.sftwr.dev](https://bearpad.sftwr.dev)
 
-> After a direct `.dmg` (macOS), `*-setup.exe` (Windows NSIS) or `.AppImage` (Linux) install, Markpad self-updates from GitHub releases via the in-app *Check for Updates…* entry (macOS app menu, or Settings elsewhere). Snap, Chocolatey, `.deb` and `.rpm` users continue to update through their distribution channels. See [RELEASING.md](RELEASING.md) if you maintain Markpad releases.
+> After a direct `.dmg` (macOS), `*-setup.exe` (Windows NSIS) or `.AppImage` (Linux) install, Bearpad self-updates from GitHub releases via the in-app *Check for Updates…* entry (macOS app menu, or Settings elsewhere). Snap, Chocolatey, `.deb` and `.rpm` users continue to update through their distribution channels. See [RELEASING.md](RELEASING.md) if you maintain Bearpad releases.
 
 ## Installation from source
 
 - Clone the repository
 - Run `npm install` to install dependencies
 - Run `npm run tauri build` to build the executable 
-- [Optional] Rename to `MarkpadInstaller.exe` to run as installer
+- [Optional] Rename to `BearpadInstaller.exe` to run as installer
 
 ## Issues & Feedback
 
-If you find a bug, have a feature request, or just want to leave some feedback, please [open an issue](https://github.com/alecdotdev/Markpad/issues/new/choose). I'm actively developing Markpad and love hearing from users!
+If you find a bug, have a feature request, or just want to leave some feedback, please [open an issue](https://github.com/merlinjkd/bearpad/issues/new/choose). I'm actively developing Bearpad and love hearing from users!
 
 ## Contributing
 
-Contributions are always welcome! Markpad is built with SvelteKit and Tauri. 
+Contributions are always welcome! Bearpad is built with SvelteKit and Tauri. 
 
 1. **Fork & Clone** the repository
 2. **Install dependencies**: `npm install`

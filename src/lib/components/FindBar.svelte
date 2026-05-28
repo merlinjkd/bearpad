@@ -14,7 +14,7 @@
 		language?: LanguageCode;
 	}>();
 
-	const FIND_MARK_CLASS = 'markpad-find-match';
+	const FIND_MARK_CLASS = 'bearpad-find-match';
 	const FIND_MARK_ACTIVE_CLASS = 'active';
 	const MAX_MATCHES = 5000;
 	const DEBOUNCE_MS = 80;
@@ -506,7 +506,7 @@
 		cursor: default;
 	}
 
-	:global(.markdown-body mark.markpad-find-match) {
+	:global(.markdown-body mark.bearpad-find-match) {
 		background-color: var(--highlight-color, rgba(255, 208, 0, 0.4));
 		color: inherit;
 		padding: 0;
@@ -514,7 +514,7 @@
 		box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
 	}
 
-	:global(.markdown-body mark.markpad-find-match.active) {
+	:global(.markdown-body mark.bearpad-find-match.active) {
 		background-color: #ff8c00;
 		color: #000;
 		box-shadow: 0 0 0 1px #ff8c00, 0 0 0 3px rgba(255, 140, 0, 0.25);

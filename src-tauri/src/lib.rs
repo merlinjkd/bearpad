@@ -14,7 +14,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 /// modern Windows — `std::fs::rename` calls `MoveFileExW` with
 /// `MOVEFILE_REPLACE_EXISTING` on Windows since Rust 1.35, so an existing
 /// destination is replaced atomically without a dedicated fallback path.
-/// Markpad targets Tauri v2 (Rust 1.70+), so we can rely on this everywhere.
+/// Bearpad targets Tauri v2 (Rust 1.70+), so we can rely on this everywhere.
 ///
 /// **Other correctness preservations vs. plain `fs::write`:**
 /// - **Symlinks:** if `target` is a symlink, follow it to the real file so we
@@ -54,13 +54,13 @@ fn atomic_write(target: &Path, bytes: &[u8]) -> std::io::Result<()> {
     let file_name = target
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "markpad".to_string());
+        .unwrap_or_else(|| "bearpad".to_string());
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or(0);
     let pid = std::process::id();
-    let temp_name = format!(".{}.markpad-tmp-{}-{}", file_name, pid, nanos);
+    let temp_name = format!(".{}.bearpad-tmp-{}-{}", file_name, pid, nanos);
     let mut temp_path = parent_path.clone();
     temp_path.push(temp_name);
 
@@ -925,7 +925,7 @@ pub fn run() {
                 label,
                 tauri::WebviewUrl::App("index.html".into()),
             )
-            .title("Markpad")
+            .title("Bearpad")
             .inner_size(900.0, 650.0)
             .min_inner_size(400.0, 300.0)
             .visible(false)
@@ -1131,7 +1131,7 @@ pub fn run() {
         .on_menu_event(|app, event| {
             let id = event.id().as_ref();
             // Emit to the focused webview window rather than `app.emit(...)`,
-            // which would broadcast to every webview. Markpad is currently
+            // which would broadcast to every webview. Bearpad is currently
             // single-window, but additional webviews (e.g. detached tabs)
             // would otherwise receive duplicate New/Close/Save invocations.
             // Falls back to "main" if no window is focused (e.g. menu fired

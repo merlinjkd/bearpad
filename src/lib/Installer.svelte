@@ -200,7 +200,7 @@
 		{:else}
 			<div class="installing-state">
 				<div class="spinner"></div>
-				<p>{t(isInstalled ? 'installer.updating' : 'installer.installing')} {t('installer.markpad')}</p>
+				<p>{t(isInstalled ? 'installer.updating' : 'installer.installing')} {t('installer.bearpad')}</p>
 			</div>
 		{/if}
 	</div>

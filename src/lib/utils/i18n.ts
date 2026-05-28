@@ -197,7 +197,10 @@ export const translations: Record<LanguageCode, Translation> = {
             wordWrapOff: 'Off',
             wordWrapOn: 'Window',
             wordWrapColumn: 'Column',
-            find: 'Find…'
+            find: 'Find…',
+            lowercase: 'lowercase',
+            uppercase: 'UPPERCASE',
+            propercase: 'Title Case'
         },
         find: {
             placeholder: 'Find',
@@ -231,24 +234,24 @@ export const translations: Record<LanguageCode, Translation> = {
         },
         update: {
             checkingHeader: 'Checking for updates…',
-            checkingBody: 'Looking for the latest version of Markpad…',
+            checkingBody: 'Looking for the latest version of Bearpad…',
             upToDateHeader: 'You\'re up to date',
-            upToDateBody: 'You\'re using the latest version of Markpad (v{{version}}).',
-            upToDateBodyNoVersion: 'You\'re using the latest version of Markpad.',
+            upToDateBody: 'You\'re using the latest version of Bearpad (v{{version}}).',
+            upToDateBodyNoVersion: 'You\'re using the latest version of Bearpad.',
             availableHeader: 'Update available',
-            availableBody: 'Markpad v{{latest}} is available. You\'re on v{{current}}.',
+            availableBody: 'Bearpad v{{latest}} is available. You\'re on v{{current}}.',
             releaseNotes: 'Release notes',
             downloadingHeader: 'Downloading update…',
-            downloadingBody: 'Downloading Markpad v{{version}}…',
+            downloadingBody: 'Downloading Bearpad v{{version}}…',
             downloadingProgress: '{{downloaded}} MB of {{total}} MB ({{pct}}%)',
             downloadingProgressUnknown: '{{downloaded}} MB downloaded',
-            downloadingHint: 'Markpad will restart automatically when the update is ready.',
+            downloadingHint: 'Bearpad will restart automatically when the update is ready.',
             errorCheckHeader: 'Update check failed',
             errorCheckBody: 'Could not check for updates.',
             errorDownloadHeader: 'Update download failed',
             errorDownloadBody: 'Could not download or install the update.',
             errorInstallHeader: 'Restart failed',
-            errorInstallBody: 'The update was downloaded but Markpad could not restart automatically. Please quit and reopen Markpad to finish installing.',
+            errorInstallBody: 'The update was downloaded but Bearpad could not restart automatically. Please quit and reopen Bearpad to finish installing.',
             notConfiguredHint: 'Updates are not configured for this build yet.',
             cancel: 'Cancel',
             ok: 'OK',
@@ -257,7 +260,7 @@ export const translations: Record<LanguageCode, Translation> = {
             retry: 'Retry'
         },
         home: {
-            welcomeToMarkpad: 'Welcome to Markpad',
+            welcomeToBearpad: 'Welcome to Bearpad',
             recentFiles: 'Recent Files',
             noRecentFiles: 'No recent files',
             newFile: 'New File',
@@ -342,15 +345,15 @@ export const translations: Record<LanguageCode, Translation> = {
             requiresAdmin: 'Requires Administrator privileges',
             updating: 'Updating',
             installing: 'Installing',
-            markpad: 'Markpad...',
+            bearpad: 'Bearpad...',
             accessDenied: 'Access denied. Please run as Administrator.'
         },
         uninstaller: {
-            uninstallMarkpad: 'Uninstall Markpad?',
+            uninstallBearpad: 'Uninstall Bearpad?',
             removeApplication: 'This will remove the application and all its shortcuts.',
             cancel: 'Cancel',
             uninstall: 'Uninstall',
-            removingMarkpad: 'Removing Markpad...'
+            removingBearpad: 'Removing Bearpad...'
         },
         tabs: {
             untitled: 'Untitled',
@@ -519,7 +522,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: '您有 {{count}} 个未保存的文件。是否保存更改？'
         },
         home: {
-            welcomeToMarkpad: '欢迎使用Markpad',
+            welcomeToBearpad: '欢迎使用Bearpad',
             recentFiles: '最近文件',
             noRecentFiles: '没有最近文件',
             newFile: '新建文件',
@@ -603,15 +606,15 @@ export const translations: Record<LanguageCode, Translation> = {
             requiresAdmin: '需要管理员权限',
             updating: '正在更新',
             installing: '正在安装',
-            markpad: 'Markpad...',
+            bearpad: 'Bearpad...',
             accessDenied: '访问被拒绝。请以管理员身份运行。'
         },
         uninstaller: {
-            uninstallMarkpad: '卸载 Markpad？',
+            uninstallBearpad: '卸载 Bearpad？',
             removeApplication: '这将移除应用程序及其所有快捷方式。',
             cancel: '取消',
             uninstall: '卸载',
-            removingMarkpad: '正在移除 Markpad...'
+            removingBearpad: '正在移除 Bearpad...'
         },
         tabs: {
             untitled: '无标题',
@@ -779,7 +782,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: '{{count}} つの保存されていないファイルがあります。変更を保存しますか？'
         },
         home: {
-            welcomeToMarkpad: 'Markpadへようこそ',
+            welcomeToBearpad: 'Bearpadへようこそ',
             recentFiles: '最近のファイル',
             noRecentFiles: '最近のファイルはありません',
             newFile: '新しいファイル',
@@ -863,15 +866,15 @@ export const translations: Record<LanguageCode, Translation> = {
             requiresAdmin: '管理者権限が必要',
             updating: '更新中',
             installing: 'インストール中',
-            markpad: 'Markpad...',
+            bearpad: 'Bearpad...',
             accessDenied: 'アクセスが拒否されました。管理者として実行してください。'
         },
         uninstaller: {
-            uninstallMarkpad: 'Markpad をアンインストールしますか？',
+            uninstallBearpad: 'Bearpad をアンインストールしますか？',
             removeApplication: 'これにより、アプリケーションとそのすべてのショートカットが削除されます。',
             cancel: 'キャンセル',
             uninstall: 'アンインストール',
-            removingMarkpad: 'Markpad を削除中...'
+            removingBearpad: 'Bearpad を削除中...'
         },
         tabs: {
             untitled: '名前なし',
@@ -1039,7 +1042,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: '您有 {{count}} 個未保存的文件。您想保存您的更改嗎？'
         },
         home: {
-            welcomeToMarkpad: '歡迎使用 Markpad',
+            welcomeToBearpad: '歡迎使用 Bearpad',
             recentFiles: '最近的文件',
             noRecentFiles: '沒有最近的文件',
             newFile: '新建文件',
@@ -1095,11 +1098,11 @@ export const translations: Record<LanguageCode, Translation> = {
             close: '關閉'
         },
         uninstaller: {
-            uninstallMarkpad: '您想要卸載 Markpad 嗎？',
+            uninstallBearpad: '您想要卸載 Bearpad 嗎？',
             removeApplication: '這將刪除應用程序及其所有快捷方式。',
             cancel: '取消',
             uninstall: '卸載',
-            removingMarkpad: '正在刪除 Markpad...'
+            removingBearpad: '正在刪除 Bearpad...'
         },
         tabs: {
             untitled: '無標題',
@@ -1270,7 +1273,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: '저장되지 않은 {{count}}개 파일이 있습니다. 변경 사항을 저장하시겠습니까?'
         },
         home: {
-            welcomeToMarkpad: 'Markpad에 오신 것을 환영합니다',
+            welcomeToBearpad: 'Bearpad에 오신 것을 환영합니다',
             recentFiles: '최근 파일',
             noRecentFiles: '최근 파일 없음',
             newFile: '새 파일',
@@ -1311,11 +1314,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: '축소'
         },
         uninstaller: {
-            uninstallMarkpad: 'Markpad를 제거하시겠습니까?',
+            uninstallBearpad: 'Bearpad를 제거하시겠습니까?',
             removeApplication: '응용 프로그램과 모든 바로 가기가 삭제됩니다.',
             cancel: '취소',
             uninstall: '제거',
-            removingMarkpad: 'Markpad 제거 중...'
+            removingBearpad: 'Bearpad 제거 중...'
         },
         tabs: {
             untitled: '제목 없음',
@@ -1483,7 +1486,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'У вас есть {{count}} несохранённых файлов. Вы хотите сохранить изменения?'
         },
         home: {
-            welcomeToMarkpad: 'Добро пожаловать в Markpad',
+            welcomeToBearpad: 'Добро пожаловать в Bearpad',
             recentFiles: 'Недавние файлы',
             noRecentFiles: 'Нет недавних файлов',
             newFile: 'Новый файл',
@@ -1524,11 +1527,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Уменьшить'
         },
         uninstaller: {
-            uninstallMarkpad: 'Вы хотите удалить Markpad?',
+            uninstallBearpad: 'Вы хотите удалить Bearpad?',
             removeApplication: 'Приложение и все его ярлыки будут удалены.',
             cancel: 'Отмена',
             uninstall: 'Удалить',
-            removingMarkpad: 'Удаление Markpad...'
+            removingBearpad: 'Удаление Bearpad...'
         },
         tabs: {
             untitled: 'Без названия',
@@ -1696,7 +1699,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Tiene {{count}} archivo(s) sin guardar. ¿Desea guardar los cambios?'
         },
         home: {
-            welcomeToMarkpad: 'Bienvenido a Markpad',
+            welcomeToBearpad: 'Bienvenido a Bearpad',
             recentFiles: 'Archivos recientes',
             noRecentFiles: 'No hay archivos recientes',
             newFile: 'Nuevo archivo',
@@ -1737,11 +1740,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Alejar'
         },
         uninstaller: {
-            uninstallMarkpad: '¿Desea desinstalar Markpad?',
+            uninstallBearpad: '¿Desea desinstalar Bearpad?',
             removeApplication: 'Se eliminará la aplicación y todos sus accesos directos.',
             cancel: 'Cancelar',
             uninstall: 'Desinstalar',
-            removingMarkpad: 'Eliminando Markpad...'
+            removingBearpad: 'Eliminando Bearpad...'
         },
         tabs: {
             untitled: 'Sin título',
@@ -1909,7 +1912,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Vous avez {{count}} fichier(s) non enregistré(s). Voulez-vous enregistrer vos modifications ?'
         },
         home: {
-            welcomeToMarkpad: 'Bienvenue dans Markpad',
+            welcomeToBearpad: 'Bienvenue dans Bearpad',
             recentFiles: 'Fichiers récents',
             noRecentFiles: 'Aucun fichier récent',
             newFile: 'Nouveau fichier',
@@ -1950,11 +1953,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Zoom arrière'
         },
         uninstaller: {
-            uninstallMarkpad: 'Voulez-vous désinstaller Markpad ?',
+            uninstallBearpad: 'Voulez-vous désinstaller Bearpad ?',
             removeApplication: 'L\'application et tous ses raccourcis seront supprimés.',
             cancel: 'Annuler',
             uninstall: 'Désinstaller',
-            removingMarkpad: 'Suppression de Markpad...'
+            removingBearpad: 'Suppression de Bearpad...'
         },
         tabs: {
             untitled: 'Sans titre',
@@ -2122,7 +2125,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Sie haben {{count}} ungespeicherte Datei(en). Möchten Sie Ihre Änderungen speichern?'
         },
         home: {
-            welcomeToMarkpad: 'Willkommen bei Markpad',
+            welcomeToBearpad: 'Willkommen bei Bearpad',
             recentFiles: 'Zuletzt verwendete Dateien',
             noRecentFiles: 'Keine zuletzt verwendeten Dateien',
             newFile: 'Neue Datei',
@@ -2163,11 +2166,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Verkleinern'
         },
         uninstaller: {
-            uninstallMarkpad: 'Möchten Sie Markpad deinstallieren?',
+            uninstallBearpad: 'Möchten Sie Bearpad deinstallieren?',
             removeApplication: 'Die Anwendung und alle ihre Verknüpfungen werden entfernt.',
             cancel: 'Abbrechen',
             uninstall: 'Deinstallieren',
-            removingMarkpad: 'Markpad wird entfernt...'
+            removingBearpad: 'Bearpad wird entfernt...'
         },
         tabs: {
             untitled: 'Unbenannt',
@@ -2335,7 +2338,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Você tem {{count}} arquivo(s) não salvo(s). Deseja salvar suas alterações?'
         },
         home: {
-            welcomeToMarkpad: 'Bem-vindo ao Markpad',
+            welcomeToBearpad: 'Bem-vindo ao Bearpad',
             recentFiles: 'Arquivos recentes',
             noRecentFiles: 'Nenhum arquivo recente',
             newFile: 'Novo arquivo',
@@ -2376,11 +2379,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Diminuir zoom'
         },
         uninstaller: {
-            uninstallMarkpad: 'Deseja desinstalar o Markpad?',
+            uninstallBearpad: 'Deseja desinstalar o Bearpad?',
             removeApplication: 'O aplicativo e todos os seus atalhos serão removidos.',
             cancel: 'Cancelar',
             uninstall: 'Desinstalar',
-            removingMarkpad: 'Removendo Markpad...'
+            removingBearpad: 'Removendo Bearpad...'
         },
         tabs: {
             untitled: 'Sem título',
@@ -2548,7 +2551,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Hai {{count}} file non salvati. Vuoi salvare le modifiche?'
         },
         home: {
-            welcomeToMarkpad: 'Benvenuto in Markpad',
+            welcomeToBearpad: 'Benvenuto in Bearpad',
             recentFiles: 'File recenti',
             noRecentFiles: 'Nessun file recente',
             newFile: 'Nuovo file',
@@ -2589,11 +2592,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Zoom indietro'
         },
         uninstaller: {
-            uninstallMarkpad: 'Vuoi disinstallare Markpad?',
+            uninstallBearpad: 'Vuoi disinstallare Bearpad?',
             removeApplication: 'L\'applicazione e tutti i suoi collegamenti verranno rimossi.',
             cancel: 'Annulla',
             uninstall: 'Disinstalla',
-            removingMarkpad: 'Rimozione Markpad...'
+            removingBearpad: 'Rimozione Bearpad...'
         },
         tabs: {
             untitled: 'Senza titolo',
@@ -2761,7 +2764,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Masz {{count}} niezapisanych plików. Czy chcesz zapisać zmiany?'
         },
         home: {
-            welcomeToMarkpad: 'Witaj w Markpad',
+            welcomeToBearpad: 'Witaj w Bearpad',
             recentFiles: 'Ostatnie pliki',
             noRecentFiles: 'Brak ostatnich plików',
             newFile: 'Nowy plik',
@@ -2802,11 +2805,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Pomniejsz'
         },
         uninstaller: {
-            uninstallMarkpad: 'Czy chcesz odinstalować Markpad?',
+            uninstallBearpad: 'Czy chcesz odinstalować Bearpad?',
             removeApplication: 'Spowoduje to usunięcie aplikacji i wszystkich jej skrótów.',
             cancel: 'Anuluj',
             uninstall: 'Odinstaluj',
-            removingMarkpad: 'Usuwanie Markpad...'
+            removingBearpad: 'Usuwanie Bearpad...'
         },
         tabs: {
             untitled: 'Bez tytułu',
@@ -2974,7 +2977,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Je hebt {{count}} niet-opgeslagen bestand(en). Wil je je wijzigingen opslaan?'
         },
         home: {
-            welcomeToMarkpad: 'Welkom bij Markpad',
+            welcomeToBearpad: 'Welkom bij Bearpad',
             recentFiles: 'Recente bestanden',
             noRecentFiles: 'Geen recente bestanden',
             newFile: 'Nieuw bestand',
@@ -3015,11 +3018,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Uitzoomen'
         },
         uninstaller: {
-            uninstallMarkpad: 'Wil je Markpad verwijderen?',
+            uninstallBearpad: 'Wil je Bearpad verwijderen?',
             removeApplication: 'Hiermee wordt de applicatie en alle snelkoppelingen verwijderd.',
             cancel: 'Annuleren',
             uninstall: 'Verwijderen',
-            removingMarkpad: 'Markpad verwijderen...'
+            removingBearpad: 'Bearpad verwijderen...'
         },
         tabs: {
             untitled: 'Naamloos',
@@ -3187,7 +3190,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Du har {{count}} osparade filer. Vill du spara dina ändringar?'
         },
         home: {
-            welcomeToMarkpad: 'Välkommen till Markpad',
+            welcomeToBearpad: 'Välkommen till Bearpad',
             recentFiles: 'Senaste filer',
             noRecentFiles: 'Inga senaste filer',
             newFile: 'Ny fil',
@@ -3228,11 +3231,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Zooma ut'
         },
         uninstaller: {
-            uninstallMarkpad: 'Vill du avinstallera Markpad?',
+            uninstallBearpad: 'Vill du avinstallera Bearpad?',
             removeApplication: 'Detta tar bort programmet och alla dess genvägar.',
             cancel: 'Avbryt',
             uninstall: 'Avinstallera',
-            removingMarkpad: 'Tar bort Markpad...'
+            removingBearpad: 'Tar bort Bearpad...'
         },
         tabs: {
             untitled: 'Namnlös',
@@ -3400,7 +3403,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Bạn có {{count}} tệp chưa lưu. Bạn có muốn lưu thay đổi không?'
         },
         home: {
-            welcomeToMarkpad: 'Chào mừng đến với Markpad',
+            welcomeToBearpad: 'Chào mừng đến với Bearpad',
             recentFiles: 'Tệp gần đây',
             noRecentFiles: 'Không có tệp gần đây',
             newFile: 'Tệp mới',
@@ -3441,11 +3444,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Thu nhỏ'
         },
         uninstaller: {
-            uninstallMarkpad: 'Bạn có muốn gỡ cài đặt Markpad không?',
+            uninstallBearpad: 'Bạn có muốn gỡ cài đặt Bearpad không?',
             removeApplication: 'Thao tác này sẽ xóa ứng dụng và tất cả lối tắt của nó.',
             cancel: 'Hủy',
             uninstall: 'Gỡ cài đặt',
-            removingMarkpad: 'Đang gỡ cài đặt Markpad...'
+            removingBearpad: 'Đang gỡ cài đặt Bearpad...'
         },
         tabs: {
             untitled: 'Chưa đặt tên',
@@ -3613,7 +3616,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Tem {{count}} ficheiro(s) não guardado(s). Pretende guardar as suas alterações?'
         },
         home: {
-            welcomeToMarkpad: 'Bem-vindo ao Markpad',
+            welcomeToBearpad: 'Bem-vindo ao Bearpad',
             recentFiles: 'Ficheiros recentes',
             noRecentFiles: 'Sem ficheiros recentes',
             newFile: 'Novo ficheiro',
@@ -3654,11 +3657,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Diminuir zoom'
         },
         uninstaller: {
-            uninstallMarkpad: 'Pretende desinstalar o Markpad?',
+            uninstallBearpad: 'Pretende desinstalar o Bearpad?',
             removeApplication: 'Isto irá remover a aplicação e todos os seus atalhos.',
             cancel: 'Cancelar',
             uninstall: 'Desinstalar',
-            removingMarkpad: 'A remover Markpad...'
+            removingBearpad: 'A remover Bearpad...'
         },
         tabs: {
             untitled: 'Sem título',
@@ -3826,7 +3829,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Aveți {{count}} fișier(e) nesalvate. Doriți să salvați modificările?'
         },
         home: {
-            welcomeToMarkpad: 'Bine ați venit la Markpad',
+            welcomeToBearpad: 'Bine ați venit la Bearpad',
             recentFiles: 'Fișiere recente',
             noRecentFiles: 'Nu există fișiere recente',
             newFile: 'Fișier nou',
@@ -3867,11 +3870,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Micșorare'
         },
         uninstaller: {
-            uninstallMarkpad: 'Doriți să dezinstalați Markpad?',
+            uninstallBearpad: 'Doriți să dezinstalați Bearpad?',
             removeApplication: 'Aceasta va elimina aplicația și toate comenzile rapide ale acesteia.',
             cancel: 'Anulare',
             uninstall: 'Dezinstalare',
-            removingMarkpad: 'Se elimină Markpad...'
+            removingBearpad: 'Se elimină Bearpad...'
         },
         tabs: {
             untitled: 'Fără titlu',
@@ -4039,7 +4042,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: '{{count}} nem mentett fájlja van. Menteni szeretné a módosításokat?'
         },
         home: {
-            welcomeToMarkpad: 'Üdvözli a Markpad',
+            welcomeToBearpad: 'Üdvözli a Bearpad',
             recentFiles: 'Legutóbbi fájlok',
             noRecentFiles: 'Nincsenek legutóbbi fájlok',
             newFile: 'Új fájl',
@@ -4080,11 +4083,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Kicsinyítés'
         },
         uninstaller: {
-            uninstallMarkpad: 'Eltávolítja a Markpad-et?',
+            uninstallBearpad: 'Eltávolítja a Bearpad-et?',
             removeApplication: 'Ez eltávolítja az alkalmazást és minden parancsikonját.',
             cancel: 'Mégse',
             uninstall: 'Eltávolítás',
-            removingMarkpad: 'Markpad eltávolítása...'
+            removingBearpad: 'Bearpad eltávolítása...'
         },
         tabs: {
             untitled: 'Névtelen',
@@ -4252,7 +4255,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Máte {{count}} neuložených souborů. Chcete uložit změny?'
         },
         home: {
-            welcomeToMarkpad: 'Vítejte v Markpadu',
+            welcomeToBearpad: 'Vítejte v Bearpadu',
             recentFiles: 'Nedávné soubory',
             noRecentFiles: 'Žádné nedávné soubory',
             newFile: 'Nový soubor',
@@ -4296,11 +4299,11 @@ export const translations: Record<LanguageCode, Translation> = {
             switchSide: 'Switch side',
         },
         uninstaller: {
-            uninstallMarkpad: 'Chcete odinstalovat Markpad?',
+            uninstallBearpad: 'Chcete odinstalovat Bearpad?',
             removeApplication: 'Tím se odstraní aplikace a všechny její zástupce.',
             cancel: 'Zrušit',
             uninstall: 'Odinstalovat',
-            removingMarkpad: 'Odstraňování Markpadu...'
+            removingBearpad: 'Odstraňování Bearpadu...'
         },
         tabs: {
             untitled: 'Bez názvu',
@@ -4471,7 +4474,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Máte {{count}} neuložených súborov. Chcete uložiť zmeny?'
         },
         home: {
-            welcomeToMarkpad: 'Vitajte v Markpade',
+            welcomeToBearpad: 'Vitajte v Bearpade',
             recentFiles: 'Nedávne súbory',
             noRecentFiles: 'Žiadne nedávne súbory',
             newFile: 'Nový súbor',
@@ -4512,11 +4515,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Oddialiť'
         },
         uninstaller: {
-            uninstallMarkpad: 'Chcete odinštalovať Markpad?',
+            uninstallBearpad: 'Chcete odinštalovať Bearpad?',
             removeApplication: 'Tým sa odstráni aplikácia a všetky jej odkazy.',
             cancel: 'Zrušiť',
             uninstall: 'Odinštalovať',
-            removingMarkpad: 'Odstraňovanie Markpadu...'
+            removingBearpad: 'Odstraňovanie Bearpadu...'
         },
         tabs: {
             untitled: 'Bez názvu',
@@ -4684,7 +4687,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Έχετε {{count}} μη αποθηκευμένα αρχεία. Θέλετε να αποθηκεύσετε τις αλλαγές σας;'
         },
         home: {
-            welcomeToMarkpad: 'Καλώς ήρθατε στο Markpad',
+            welcomeToBearpad: 'Καλώς ήρθατε στο Bearpad',
             recentFiles: 'Πρόσφατα αρχεία',
             noRecentFiles: 'Δεν υπάρχουν πρόσφατα αρχεία',
             newFile: 'Νέο αρχείο',
@@ -4725,11 +4728,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Σμίκρυνση'
         },
         uninstaller: {
-            uninstallMarkpad: 'Θέλετε να απεγκαταστήσετε το Markpad;',
+            uninstallBearpad: 'Θέλετε να απεγκαταστήσετε το Bearpad;',
             removeApplication: 'Αυτό θα καταργήσει την εφαρμογή και όλες τις συντομεύσεις της.',
             cancel: 'Ακύρωση',
             uninstall: 'Απεγκατάσταση',
-            removingMarkpad: 'Κατάργηση Markpad...'
+            removingBearpad: 'Κατάργηση Bearpad...'
         },
         tabs: {
             untitled: 'Χωρίς τίτλο',
@@ -4897,7 +4900,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Sinulla on {{count}} tallentamatonta tiedostoa. Haluatko tallentaa muutokset?'
         },
         home: {
-            welcomeToMarkpad: 'Tervetuloa Markpadiin',
+            welcomeToBearpad: 'Tervetuloa Bearpadiin',
             recentFiles: 'Viimeisimmät tiedostot',
             noRecentFiles: 'Ei viimeisimpiä tiedostoja',
             newFile: 'Uusi tiedosto',
@@ -4938,11 +4941,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Loitonna'
         },
         uninstaller: {
-            uninstallMarkpad: 'Haluatko poistaa Markpadin asennuksen?',
+            uninstallBearpad: 'Haluatko poistaa Bearpadin asennuksen?',
             removeApplication: 'Tämä poistaa sovelluksen ja kaikki sen pikakuvakkeet.',
             cancel: 'Peruuta',
             uninstall: 'Poista asennus',
-            removingMarkpad: 'Poistetaan Markpadia...'
+            removingBearpad: 'Poistetaan Bearpadia...'
         },
         tabs: {
             untitled: 'Nimetön',
@@ -5110,7 +5113,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Du har {{count}} ikke-gemte filer. Vil du gemme dine ændringer?'
         },
         home: {
-            welcomeToMarkpad: 'Velkommen til Markpad',
+            welcomeToBearpad: 'Velkommen til Bearpad',
             recentFiles: 'Seneste filer',
             noRecentFiles: 'Ingen seneste filer',
             newFile: 'Ny fil',
@@ -5151,11 +5154,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Zoom ud'
         },
         uninstaller: {
-            uninstallMarkpad: 'Vil du afinstallere Markpad?',
+            uninstallBearpad: 'Vil du afinstallere Bearpad?',
             removeApplication: 'Dette fjerner applikationen og alle dens genveje.',
             cancel: 'Annuller',
             uninstall: 'Afinstaller',
-            removingMarkpad: 'Fjerner Markpad...'
+            removingBearpad: 'Fjerner Bearpad...'
         },
         tabs: {
             untitled: 'Unavngivet',
@@ -5323,7 +5326,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Du har {{count}} ulagrede filer. Vil du lagre endringene dine?'
         },
         home: {
-            welcomeToMarkpad: 'Velkommen til Markpad',
+            welcomeToBearpad: 'Velkommen til Bearpad',
             recentFiles: 'Nylige filer',
             noRecentFiles: 'Ingen nylige filer',
             newFile: 'Ny fil',
@@ -5364,11 +5367,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Zoom ut'
         },
         uninstaller: {
-            uninstallMarkpad: 'Vil du avinstallere Markpad?',
+            uninstallBearpad: 'Vil du avinstallere Bearpad?',
             removeApplication: 'Dette fjerner applikasjonen og alle snarveiene dens.',
             cancel: 'Avbryt',
             uninstall: 'Avinstaller',
-            removingMarkpad: 'Fjerner Markpad...'
+            removingBearpad: 'Fjerner Bearpad...'
         },
         tabs: {
             untitled: 'Uten tittel',
@@ -5536,7 +5539,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: 'Anda memiliki {{count}} berkas yang belum disimpan. Apakah Anda ingin menyimpan perubahan Anda?'
         },
         home: {
-            welcomeToMarkpad: 'Selamat Datang di Markpad',
+            welcomeToBearpad: 'Selamat Datang di Bearpad',
             recentFiles: 'Berkas Terbaru',
             noRecentFiles: 'Tidak Ada Berkas Terbaru',
             newFile: 'Berkas Baru',
@@ -5577,11 +5580,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Perkecil'
         },
         uninstaller: {
-            uninstallMarkpad: 'Apakah Anda ingin mencopot pemasangan Markpad?',
+            uninstallBearpad: 'Apakah Anda ingin mencopot pemasangan Bearpad?',
             removeApplication: 'Tindakan ini akan menghapus aplikasi dan semua pintasannya.',
             cancel: 'Batal',
             uninstall: 'Copot Pemasangan',
-            removingMarkpad: 'Mencopot Markpad...'
+            removingBearpad: 'Mencopot Bearpad...'
         },
         tabs: {
             untitled: 'Tidak Berjudul',
@@ -5749,7 +5752,7 @@ export const translations: Record<LanguageCode, Translation> = {
             youHaveUnsavedFiles: '{{count}} kaydedilmemiş dosyanız var. Değişikliklerinizi kaydetmek istiyor musunuz?'
         },
         home: {
-            welcomeToMarkpad: 'Markpad\'e Hoş Geldiniz',
+            welcomeToBearpad: 'Bearpad\'e Hoş Geldiniz',
             recentFiles: 'Son Dosyalar',
             noRecentFiles: 'Son Dosya Yok',
             newFile: 'Yeni Dosya',
@@ -5790,11 +5793,11 @@ export const translations: Record<LanguageCode, Translation> = {
             zoomOut: 'Uzaklaştır'
         },
         uninstaller: {
-            uninstallMarkpad: 'Markpad\'i kaldırmak istiyor musunuz?',
+            uninstallBearpad: 'Bearpad\'i kaldırmak istiyor musunuz?',
             removeApplication: 'Bu, uygulamayı ve tüm kısayollarını kaldıracak.',
             cancel: 'İptal',
             uninstall: 'Kaldır',
-            removingMarkpad: 'Markpad kaldırılıyor...'
+            removingBearpad: 'Bearpad kaldırılıyor...'
         },
         tabs: {
             untitled: 'Başlıksız',

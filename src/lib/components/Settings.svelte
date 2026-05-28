@@ -274,8 +274,8 @@
 							class="github-btn"
 							onclick={() =>
 								import('@tauri-apps/plugin-opener')
-									.then((m) => m.openUrl('https://github.com/alecdotdev/Markpad'))
-									.catch(() => window.open('https://github.com/alecdotdev/Markpad', '_blank'))}
+									.then((m) => m.openUrl('https://github.com/merlinjkd/bearpad'))
+									.catch(() => window.open('https://github.com/merlinjkd/bearpad', '_blank'))}
 							aria-label="GitHub">
 							<svg viewBox="0 0 24 24" class="github-icon" fill="currentColor">
 									<path

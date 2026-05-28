@@ -78,6 +78,8 @@ import { t } from './utils/i18n.js';
 		redo: () => void;
 		revealHeader: (text: string) => void;
 		triggerFind: () => void;
+		hasSelection: () => boolean;
+		transformSelection: (type: 'lowercase' | 'uppercase' | 'propercase') => void;
 	} | null>(null);
 	let liveMode = $state(false);
 
@@ -170,7 +172,7 @@ import { t } from './utils/i18n.js';
 	}));
 	let scrollTop = $derived(tabManager.activeTab?.scrollTop ?? 0);
 	let isScrolled = $derived(scrollTop > 0);
-	let windowTitle = $derived(tabManager.activeTab?.title ?? 'Markpad');
+	let windowTitle = $derived(tabManager.activeTab?.title ?? 'Bearpad');
 	let isScrollSynced = $derived(tabManager.activeTab?.isScrollSynced ?? false);
 
 	let loadingTabs = $state<string[]>([]);
@@ -1802,6 +1804,14 @@ import { t } from './utils/i18n.js';
 							{ separator: true }
 						]
 					: []),
+				...(isEditing && isInsideEditor && editorPane?.hasSelection()
+					? [
+							{ label: t('menu.lowercase', uiLanguage), onClick: () => { editorPane?.transformSelection('lowercase'); docContextMenu.show = false; } },
+							{ label: t('menu.uppercase', uiLanguage), onClick: () => { editorPane?.transformSelection('uppercase'); docContextMenu.show = false; } },
+							{ label: t('menu.propercase', uiLanguage), onClick: () => { editorPane?.transformSelection('propercase'); docContextMenu.show = false; } },
+							{ separator: true }
+						]
+					: []),
 				...(hasSelection ? [{ label: t('menu.copy', uiLanguage), onClick: () => {
 					const selection = window.getSelection()?.toString();
 					if (selection) invoke('clipboard_write_text', { text: selection });
@@ -2174,7 +2184,7 @@ import { t } from './utils/i18n.js';
 		const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
 		const webview = new WebviewWindow(label, {
 			url: 'index.html?file=' + encodeURIComponent(path),
-			title: 'Markpad - ' + path.split(/[/\\]/).pop(),
+			title: 'Bearpad - ' + path.split(/[/\\]/).pop(),
 			width: 1000,
 			height: 800,
 		});
@@ -2393,7 +2403,7 @@ import { t } from './utils/i18n.js';
 					updateStore.openDialog();
 				}),
 			);
-			// Native macOS menubar — Markpad ▸ Quit and File ▸ * — bridged
+			// Native macOS menubar — Bearpad ▸ Quit and File ▸ * — bridged
 			// to the same handlers the in-window burger button uses, so the
 			// menu and the burger stay behaviourally identical. Save mirrors
 			// the keydown guard (`isEditing || isSplit`) so menu ⌘S in pure
@@ -2600,7 +2610,7 @@ import { t } from './utils/i18n.js';
 		isScrolled={false}
 		currentFile={''}
 		{liveMode}
-		windowTitle="Markpad"
+		windowTitle="Bearpad"
 		showHome={false}
 		{zoomLevel}
 		onselectFile={selectFile}

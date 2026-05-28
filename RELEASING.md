@@ -1,44 +1,44 @@
-# Releasing Markpad
+# Releasing Bearpad
 
-This document is the maintainer-facing runbook for cutting a Markpad release with auto-update enabled. Auto-update is wired through [`tauri-plugin-updater`](https://v2.tauri.app/plugin/updater/), which verifies signed update bundles using [minisign](https://jedisct1.github.io/minisign/).
+This document is the maintainer-facing runbook for cutting a Bearpad release with auto-update enabled. Auto-update is wired through [`tauri-plugin-updater`](https://v2.tauri.app/plugin/updater/), which verifies signed update bundles using [minisign](https://jedisct1.github.io/minisign/).
 
 ## One-time setup (do once, before the first auto-update-capable release)
 
 ### 1. Generate the signing keypair
 
-On your local machine, in the Markpad checkout:
+On your local machine, in the Bearpad checkout:
 
 ```bash
-npm run tauri signer generate -- -w ~/.tauri/markpad-updater.key
+npm run tauri signer generate -- -w ~/.tauri/bearpad-updater.key
 ```
 
 You'll be prompted for a password. **Pick a strong one and store it together with the private key in your password manager.** The command produces two files:
 
-- `~/.tauri/markpad-updater.key`     — **PRIVATE**. Never commit. Never share. Back up to a password manager.
-- `~/.tauri/markpad-updater.key.pub` — **PUBLIC**. Shared with developers; ends up shipped inside Markpad.
+- `~/.tauri/bearpad-updater.key`     — **PRIVATE**. Never commit. Never share. Back up to a password manager.
+- `~/.tauri/bearpad-updater.key.pub` — **PUBLIC**. Shared with developers; ends up shipped inside Bearpad.
 
-### 2. Add Secrets to `alecdotdev/Markpad`
+### 2. Add Secrets to `merlinjkd/bearpad`
 
 In the GitHub repo settings → Secrets and variables → Actions → New repository secret:
 
 | Name                                  | Value                                              |
 |---------------------------------------|----------------------------------------------------|
-| `TAURI_SIGNING_PRIVATE_KEY`           | full content of `~/.tauri/markpad-updater.key`     |
+| `TAURI_SIGNING_PRIVATE_KEY`           | full content of `~/.tauri/bearpad-updater.key`     |
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`  | the password you set in step 1                     |
 
 The build workflow reads both at signing time on macOS, Windows, and Linux runners.
 
 ### 3. Send the public key content
 
-Send the **single-line content** of `~/.tauri/markpad-updater.key.pub` (no comments, no header lines) to the developer who'll commit it to `src-tauri/tauri.conf.json` under `plugins.updater.pubkey`. Until that placeholder is replaced, auto-update is inert — the app surfaces a clean error state instead of contacting the update server.
+Send the **single-line content** of `~/.tauri/bearpad-updater.key.pub` (no comments, no header lines) to the developer who'll commit it to `src-tauri/tauri.conf.json` under `plugins.updater.pubkey`. Until that placeholder is replaced, auto-update is inert — the app surfaces a clean error state instead of contacting the update server.
 
 ### 4. CRITICAL: the pubkey is permanent
 
-Once a release ships with the pubkey embedded, **it cannot be rotated** without breaking auto-update for every existing user. Rotation means everyone re-installs Markpad manually. Treat the keypair as a long-lived release secret.
+Once a release ships with the pubkey embedded, **it cannot be rotated** without breaking auto-update for every existing user. Rotation means everyone re-installs Bearpad manually. Treat the keypair as a long-lived release secret.
 
 If you ever lose the private key:
 
-- Existing users can still use Markpad, but they will not auto-update again.
+- Existing users can still use Bearpad, but they will not auto-update again.
 - A new keypair has to be generated, embedded in a new release, and that release has to be installed manually by every user.
 - Communicate this in release notes so users aren't blindsided.
 
@@ -57,7 +57,7 @@ If you ever lose the private key:
    - GitHub UI: Actions → "Build and Release" → Run workflow → master
    - Or CLI: `gh workflow run build.yml --ref master`
 4. **Wait** ~30 min for matrix builds to finish, plus ~2 min for `generate-update-feed`.
-5. **Open the draft release** on the [Releases page](https://github.com/alecdotdev/Markpad/releases). Verify the assets:
+5. **Open the draft release** on the [Releases page](https://github.com/merlinjkd/bearpad/releases). Verify the assets:
    - **macOS**: `*.dmg`, `*.app.tar.gz`, `*.app.tar.gz.sig`
    - **Windows x64**: `*_x64.exe` (portable), `*_x64-setup.exe` (NSIS installer), `*_x64-setup.exe.sig`
    - **Windows ARM64**: `*_arm64.exe` (portable), `*_arm64-setup.exe` (NSIS installer), `*_arm64-setup.exe.sig`
@@ -67,11 +67,11 @@ If you ever lose the private key:
 
 ## First auto-update-capable release
 
-The first release after auto-update is enabled does **not** auto-update existing users — older Markpad builds don't have the updater wiring yet. They must download and install this version manually once. From then on, every subsequent release reaches users automatically.
+The first release after auto-update is enabled does **not** auto-update existing users — older Bearpad builds don't have the updater wiring yet. They must download and install this version manually once. From then on, every subsequent release reaches users automatically.
 
 Mention this clearly in the release notes for the first auto-update-capable version, e.g.:
 
-> This release activates in-app auto-updates. **Install it manually one last time** — future releases will update Markpad on their own.
+> This release activates in-app auto-updates. **Install it manually one last time** — future releases will update Bearpad on their own.
 
 ## Coverage notes
 

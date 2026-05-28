@@ -1,4 +1,4 @@
-# [Markpad](#Markpad)
+# [Bearpad](#Bearpad)
 
 Everything you'd want from a simple markdown viewer. ^important
 

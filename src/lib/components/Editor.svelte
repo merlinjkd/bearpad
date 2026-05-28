@@ -314,6 +314,39 @@
 			},
 		});
 
+		editor.addAction({
+			id: "transform-lowercase",
+			label: t('menu.lowercase', uiLanguage),
+			contextMenuGroupId: "0_transform",
+			contextMenuOrder: 1,
+			precondition: "editorHasSelection",
+			run: () => {
+				transformSelection('lowercase');
+			},
+		});
+
+		editor.addAction({
+			id: "transform-uppercase",
+			label: t('menu.uppercase', uiLanguage),
+			contextMenuGroupId: "0_transform",
+			contextMenuOrder: 2,
+			precondition: "editorHasSelection",
+			run: () => {
+				transformSelection('uppercase');
+			},
+		});
+
+		editor.addAction({
+			id: "transform-propercase",
+			label: t('menu.propercase', uiLanguage),
+			contextMenuGroupId: "0_transform",
+			contextMenuOrder: 3,
+			precondition: "editorHasSelection",
+			run: () => {
+				transformSelection('propercase');
+			},
+		});
+
 		$effect(() => {
 			if (editor) {
 				editor.updateOptions({
@@ -1130,6 +1163,30 @@
 	export const getViewState = () => editor?.saveViewState();
 	export const restoreViewState = (state: any) => editor?.restoreViewState(state);
 	export const revealLine = (line: number) => editor?.revealLineInCenter(line);
+
+	export const hasSelection = () => {
+		const selections = editor?.getSelections() || [];
+		return selections.some((s: monaco.Selection) => !s.isEmpty());
+	}
+
+	export const transformSelection = (type: 'lowercase' | 'uppercase' | 'propercase') => {
+		if (!editor) return;
+		const model = editor.getModel();
+		if (!model) return;
+		const selections = editor.getSelections() || [];
+		if (selections.length === 0) return;
+
+		const edits = selections.map((selection: monaco.Selection) => {
+			const text = model.getValueInRange(selection);
+			let newText = text;
+			if (type === 'lowercase') newText = text.toLowerCase();
+			else if (type === 'uppercase') newText = text.toUpperCase();
+			else if (type === 'propercase') newText = text.toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase());
+			return { range: selection, text: newText };
+		});
+
+		editor.executeEdits('transform-selection', edits);
+	}
 </script>
 
 <div class="editor-outer">

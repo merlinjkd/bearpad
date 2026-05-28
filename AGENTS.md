@@ -1,10 +1,10 @@
-# AGENTS.md - Coding Guidelines for Markpad
+# AGENTS.md - Coding Guidelines for Bearpad
 
-This file contains guidelines for AI agents working on the Markpad codebase.
+This file contains guidelines for AI agents working on the Bearpad codebase.
 
 ## Project Overview
 
-Markpad is a Tauri v2 application with:
+Bearpad is a Tauri v2 application with:
 - **Frontend**: Svelte 5 + TypeScript + Vite
 - **Backend**: Rust (Tauri commands)
 - **Purpose**: Markdown viewer and text editor
@@ -183,6 +183,6 @@ See [RELEASING.md](RELEASING.md) for the maintainer-facing release runbook
 
 For agents: never modify `plugins.updater.pubkey` in `src-tauri/tauri.conf.json`.
 That value is set once by the maintainer and shipping a different one breaks
-auto-update for all existing users — they have to manually re-install Markpad.
+auto-update for all existing users — they have to manually re-install Bearpad.
 The placeholder string in PR-2 is replaced exactly once, by the maintainer,
 right before the first auto-update-capable release.

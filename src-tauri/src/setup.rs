@@ -14,9 +14,9 @@ use winreg::enums::*;
 #[cfg(target_os = "windows")]
 use winreg::RegKey;
 
-const APP_NAME: &str = "Markpad";
+const APP_NAME: &str = "Bearpad";
 #[cfg(target_os = "windows")]
-const EXE_NAME: &str = "Markpad.exe";
+const EXE_NAME: &str = "Bearpad.exe";
 
 #[derive(Serialize)]
 pub struct InstallStatus {
@@ -33,7 +33,7 @@ pub fn get_install_path(all_users: bool) -> PathBuf {
             env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
         PathBuf::from(program_files).join(APP_NAME)
     } else {
-        // AppData/Local/Markpad
+        // AppData/Local/Bearpad
         let local_app_data = env::var("LOCALAPPDATA").unwrap_or_else(|_| {
             let user_profile =
                 env::var("USERPROFILE").unwrap_or_else(|_| "C:\\Users\\Default".to_string());
@@ -364,7 +364,7 @@ pub async fn uninstall_app(
         ));
         let _ = root.delete_subkey_all("Software\\Classes\\.md");
         let _ = root.delete_subkey_all("Software\\Classes\\.markdown");
-        let _ = root.delete_subkey_all("Software\\Classes\\Markpad.File");
+        let _ = root.delete_subkey_all("Software\\Classes\\Bearpad.File");
     }
 
     // 3. Self-destruction
@@ -435,15 +435,15 @@ fn register_file_association(exe_path: &Path, all_users: bool) -> Result<(), std
 
     // .md
     let (md_key, _) = root.create_subkey("Software\\Classes\\.md")?;
-    md_key.set_value("", &"Markpad.File")?;
+    md_key.set_value("", &"Bearpad.File")?;
 
     // .markdown
     let (markdown_key, _) = root.create_subkey("Software\\Classes\\.markdown")?;
-    markdown_key.set_value("", &"Markpad.File")?;
+    markdown_key.set_value("", &"Bearpad.File")?;
 
-    // Markpad.File
-    let (file_key, _) = root.create_subkey("Software\\Classes\\Markpad.File")?;
-    file_key.set_value("", &"Markpad File")?;
+    // Bearpad.File
+    let (file_key, _) = root.create_subkey("Software\\Classes\\Bearpad.File")?;
+    file_key.set_value("", &"Bearpad File")?;
 
     let (icon_key, _) = file_key.create_subkey("DefaultIcon")?;
     icon_key.set_value("", &format!("\"{}\",0", exe_path.display()))?;

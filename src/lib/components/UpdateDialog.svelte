@@ -164,7 +164,7 @@
 					{:else if updateStore.phase === 'error'}
 						{errorHeading}
 					{:else}
-						Markpad
+						Bearpad
 					{/if}
 				</h3>
 			</div>

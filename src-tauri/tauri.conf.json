@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Markpad",
+  "productName": "Bearpad",
   "version": "../package.json",
-  "identifier": "com.alecdotdev.markpad",
+  "identifier": "com.merlinjkd.bearpad",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -47,7 +47,7 @@
         ],
         "mimeType": "text/markdown",
         "name": "Markdown File",
-        "description": "Opens Markdown files with Markpad",
+        "description": "Opens Markdown files with Bearpad",
         "role": "Editor"
       },
       {
@@ -55,7 +55,7 @@
         "contentTypes": ["public.plain-text"],
         "mimeType": "text/plain",
         "name": "Text File",
-        "description": "Opens Text files with Markpad",
+        "description": "Opens Text files with Bearpad",
         "role": "Editor"
       }
     ],
@@ -76,7 +76,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/alecdotdev/Markpad/releases/latest/download/latest.json"
+        "https://github.com/merlinjkd/bearpad/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIzMENBRkQ5NjFGRkM4NDcKUldSSHlQOWgyYThNczhINFc4VzVmVEcrS2JGRlRKRWFTVHVTVU9saC9WdFJQZjc0RjZzNmdQRGcK",
       "windows": { "installMode": "passive" }
