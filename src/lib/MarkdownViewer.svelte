@@ -655,7 +655,9 @@ import { t } from './utils/i18n.js';
 
 				const copyCode = () => {
 					const codeToCopy = codeContent.replace(/\n$/, '');
-					invoke('clipboard_write_text', { text: codeToCopy }).then(() => {
+					navigator.clipboard.writeText(codeToCopy).catch(() => {
+						invoke('clipboard_write_text', { text: codeToCopy });
+					}).then(() => {
 						const originalContent = label.innerHTML;
 						label.innerHTML = 'Copied!';
 						label.classList.add('copied');
@@ -1768,7 +1770,7 @@ import { t } from './utils/i18n.js';
 			const filename = tab?.path ? tab.path.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, '') || '' : '';
 			const ref = filename ? `[[${filename}#${text}]]` : `#${text}`;
 			copyRefItem = [
-				{ label: t('menu.copyReference', uiLanguage), onClick: () => invoke('clipboard_write_text', { text: ref }) },
+				{ label: t('menu.copyReference', uiLanguage), onClick: () => navigator.clipboard.writeText(ref).catch(() => invoke('clipboard_write_text', { text: ref })) },
 				{ separator: true },
 			];
 		}
@@ -1814,7 +1816,7 @@ import { t } from './utils/i18n.js';
 					: []),
 				...(hasSelection ? [{ label: t('menu.copy', uiLanguage), onClick: () => {
 					const selection = window.getSelection()?.toString();
-					if (selection) invoke('clipboard_write_text', { text: selection });
+					if (selection) navigator.clipboard.writeText(selection).catch(() => invoke('clipboard_write_text', { text: selection }));
 				} }] : []),
 				{ label: t('menu.selectAll', uiLanguage), onClick: () => {
 					if (!markdownBody) return;
@@ -2804,7 +2806,7 @@ import { t } from './utils/i18n.js';
 										onBeforeJump={pushScrollHistory} 
 										{collapsedHeaders} 
 										ontoggleFold={toggleFold} 
-										oncopyref={(text: string) => { const tab = tabManager.activeTab; const fn = tab?.path ? tab.path.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, '') || '' : ''; invoke('clipboard_write_text', { text: fn ? `[[${fn}#${text}]]` : `#${text}` }); }}
+										oncopyref={(text: string) => { const tab = tabManager.activeTab; const fn = tab?.path ? tab.path.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, '') || '' : ''; navigator.clipboard.writeText(fn ? `[[${fn}#${text}]]` : `#${text}`).catch(() => invoke('clipboard_write_text', { text: fn ? `[[${fn}#${text}]]` : `#${text}` })); }}
 										onjump={(id: string, text: string) => {
 											if (isEditing && editorPane) {
 												editorPane.revealHeader(text);
@@ -2821,7 +2823,7 @@ import { t } from './utils/i18n.js';
 														onClick: () => {
 															const tab = tabManager.activeTab;
 															const fn = tab?.path ? tab.path.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, '') || '' : '';
-															invoke('clipboard_write_text', { text: fn ? `[[${fn}#${item.text}]]` : `#${item.text}` });
+																navigator.clipboard.writeText(fn ? `[[${fn}#${item.text}]]` : `#${item.text}`).catch(() => invoke('clipboard_write_text', { text: fn ? `[[${fn}#${item.text}]]` : `#${item.text}` }));
 															docContextMenu.show = false;
 														} 
 													}

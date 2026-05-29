@@ -717,7 +717,32 @@
 			},
 		);
 
-		// clipboard handling: override Ctrl+C and Ctrl+V to use Rust backend
+		// clipboard handling: override Ctrl+C/X/V to use native clipboard API
+		editor.addAction({
+			id: "custom-cut",
+			label: t('menu.cut', uiLanguage),
+			keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX],
+			keybindingContext: "editorTextFocus",
+			run: async (ed) => {
+				const selection = ed.getSelection();
+				if (!selection || selection.isEmpty()) return;
+				const model = ed.getModel();
+				if (!model) return;
+				const text = model.getValueInRange(selection);
+				if (text) {
+					try {
+						await navigator.clipboard.writeText(text);
+					} catch {
+						await invoke("clipboard_write_text", { text }).catch(console.error);
+					}
+					// delete selected text
+					ed.executeEdits("custom-cut", [
+						{ range: selection, text: "", forceMoveMarkers: true },
+					]);
+				}
+			},
+		});
+
 		editor.addAction({
 			id: "custom-copy",
 			label: t('menu.copy', uiLanguage),
@@ -730,7 +755,11 @@
 				if (!model) return;
 				const text = model.getValueInRange(selection);
 				if (text) {
-					await invoke("clipboard_write_text", { text }).catch(console.error);
+					try {
+						await navigator.clipboard.writeText(text);
+					} catch {
+						await invoke("clipboard_write_text", { text }).catch(console.error);
+					}
 				}
 			},
 		});
@@ -785,8 +814,13 @@
 					}
 				}
 
-				// fall through to text paste via Rust
-				const rawText = await invoke("clipboard_read_text").catch(() => "") as string;
+				// fall through to text paste via native clipboard
+				let rawText = "";
+				try {
+					rawText = await navigator.clipboard.readText();
+				} catch {
+					rawText = await invoke("clipboard_read_text").catch(() => "") as string;
+				}
 				if (!rawText) return;
 				
 				const text = rawText.trim();

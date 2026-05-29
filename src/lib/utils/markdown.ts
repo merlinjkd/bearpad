@@ -814,19 +814,19 @@ export async function renderRichContent(
 
 			const copyCode = () => {
 				const codeToCopy = codeContent.replace(/\n$/, "");
-				invoke("clipboard_write_text", { text: codeToCopy })
-					.then(() => {
-						const originalContent = label.innerHTML;
-						label.innerHTML = "Copied!";
-						label.classList.add("copied");
-						setTimeout(() => {
-							label.innerHTML = originalContent;
-							label.classList.remove("copied");
-						}, 1500);
-					})
-					.catch((err) => {
-						console.error("Failed to copy code:", err);
-					});
+				navigator.clipboard.writeText(codeToCopy).catch(() => {
+					invoke("clipboard_write_text", { text: codeToCopy });
+				}).then(() => {
+					const originalContent = label.innerHTML;
+					label.innerHTML = "Copied!";
+					label.classList.add("copied");
+					setTimeout(() => {
+						label.innerHTML = originalContent;
+						label.classList.remove("copied");
+					}, 1500);
+				}).catch((err) => {
+					console.error("Failed to copy code:", err);
+				});
 			};
 
 			const label = document.createElement("button");
