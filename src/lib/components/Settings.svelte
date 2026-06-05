@@ -297,7 +297,7 @@
 								<h2>{t('settings.editorSettings', settings.language)}</h2>
 								<button
 									class="reset-text-btn"
-									class:disabled={settings.editorFont === defaultFonts.editorFont && settings.editorFontSize === 14 && settings.editorMaxWidth === 80}
+									class:disabled={settings.editorFont === defaultFonts.editorFont && settings.editorFontSize === 18 && settings.editorMaxWidth === 80}
 									onclick={() => { settings.resetEditorFont(); settings.resetEditorMaxWidth(); }}>
 									{t('settings.resetEditorSettings', settings.language)}
 								</button>

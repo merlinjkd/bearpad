@@ -1,4 +1,5 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import DOMPurify from "dompurify";
 
 export const highlightColorMap: Record<string, string> = {
@@ -814,9 +815,7 @@ export async function renderRichContent(
 
 			const copyCode = () => {
 				const codeToCopy = codeContent.replace(/\n$/, "");
-				navigator.clipboard.writeText(codeToCopy).catch(() => {
-					invoke("clipboard_write_text", { text: codeToCopy });
-				}).then(() => {
+				writeText(codeToCopy).then(() => {
 					const originalContent = label.innerHTML;
 					label.innerHTML = "Copied!";
 					label.classList.add("copied");

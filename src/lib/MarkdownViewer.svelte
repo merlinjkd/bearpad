@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invoke, convertFileSrc } from '@tauri-apps/api/core';
+	import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 	import { listen } from '@tauri-apps/api/event';
 	import { getCurrentWindow } from '@tauri-apps/api/window';
 	import { onMount, tick, untrack } from 'svelte';
@@ -69,18 +70,22 @@ import { t } from './utils/i18n.js';
 		cyan: 'rgba(43, 185, 178, 0.4)',
 		green: 'rgba(77, 177, 88, 0.4)',
 	};
-	let editorPane = $state<{ 
-		syncScrollToLine: (line: number, ratio?: number) => void; 
-		handleDroppedFile: (path: string, x: number, y: number) => Promise<void>;
-		updateDragCaret: (x: number, y: number) => void;
-		hideDragCaret: () => void;
-		undo: () => void;
-		redo: () => void;
-		revealHeader: (text: string) => void;
-		triggerFind: () => void;
-		hasSelection: () => boolean;
-		transformSelection: (type: 'lowercase' | 'uppercase' | 'propercase') => void;
-	} | null>(null);
+ 	let editorPane = $state<{
+ 		syncScrollToLine: (line: number, ratio?: number) => void;
+ 		handleDroppedFile: (path: string, x: number, y: number) => Promise<void>;
+ 		updateDragCaret: (x: number, y: number) => void;
+ 		hideDragCaret: () => void;
+ 		undo: () => void;
+ 		redo: () => void;
+ 		revealHeader: (text: string) => void;
+ 		triggerFind: () => void;
+ 		hasSelection: () => boolean;
+ 		transformSelection: (type: 'lowercase' | 'uppercase' | 'propercase') => void;
+ 		handleCopy: () => Promise<void>;
+ 		handleCut: () => Promise<void>;
+ 		handlePaste: () => Promise<void>;
+ 		handleSelectAll: () => void;
+ 	} | null>(null);
 	let liveMode = $state(false);
 
 	let findOpen = $state(false);
@@ -191,7 +196,7 @@ import { t } from './utils/i18n.js';
 	import { parseAndApplyVscodeTheme, clearVscodeTheme } from './utils/theme';
 
 	// Theme State
-	let theme = $state<string>('system');
+	let theme = $state<string>('dark');
 
 	onMount(() => {
 		const storedTheme = localStorage.getItem('theme');
@@ -653,22 +658,20 @@ import { t } from './utils/i18n.js';
 					wrapper.appendChild(preEl);
 				}
 
-				const copyCode = () => {
-					const codeToCopy = codeContent.replace(/\n$/, '');
-					navigator.clipboard.writeText(codeToCopy).catch(() => {
-						invoke('clipboard_write_text', { text: codeToCopy });
-					}).then(() => {
-						const originalContent = label.innerHTML;
-						label.innerHTML = 'Copied!';
-						label.classList.add('copied');
-						setTimeout(() => {
-							label.innerHTML = originalContent;
-							label.classList.remove('copied');
-						}, 1500);
-					}).catch((err) => {
-						console.error('Failed to copy code:', err);
-					});
-				};
+			const copyCode = () => {
+				const codeToCopy = codeContent.replace(/\n$/, '');
+				writeText(codeToCopy).then(() => {
+					const originalContent = label.innerHTML;
+					label.innerHTML = 'Copied!';
+					label.classList.add('copied');
+					setTimeout(() => {
+						label.innerHTML = originalContent;
+						label.classList.remove('copied');
+					}, 1500);
+				}).catch((err) => {
+					console.error('Failed to copy code:', err);
+				});
+			};
 
 				const label = document.createElement('button');
 				label.className = 'lang-label';
@@ -1770,7 +1773,7 @@ import { t } from './utils/i18n.js';
 			const filename = tab?.path ? tab.path.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, '') || '' : '';
 			const ref = filename ? `[[${filename}#${text}]]` : `#${text}`;
 			copyRefItem = [
-				{ label: t('menu.copyReference', uiLanguage), onClick: () => navigator.clipboard.writeText(ref).catch(() => invoke('clipboard_write_text', { text: ref })) },
+				{ label: t('menu.copyReference', uiLanguage), onClick: () => writeText(ref) },
 				{ separator: true },
 			];
 		}
@@ -1816,7 +1819,7 @@ import { t } from './utils/i18n.js';
 					: []),
 				...(hasSelection ? [{ label: t('menu.copy', uiLanguage), onClick: () => {
 					const selection = window.getSelection()?.toString();
-					if (selection) navigator.clipboard.writeText(selection).catch(() => invoke('clipboard_write_text', { text: selection }));
+					if (selection) writeText(selection);
 				} }] : []),
 				{ label: t('menu.selectAll', uiLanguage), onClick: () => {
 					if (!markdownBody) return;
@@ -2344,6 +2347,47 @@ import { t } from './utils/i18n.js';
 				}),
 			);
 			unlisteners.push(
+				await listen('menu-edit-cut', () => {
+					if (editorPane) {
+						editorPane.handleCut();
+					}
+				}),
+			);
+			unlisteners.push(
+				await listen('menu-edit-copy', () => {
+					if (editorPane) {
+						editorPane.handleCopy();
+					} else {
+						// Preview mode: use browser selection
+						const selection = window.getSelection()?.toString();
+						if (selection) writeText(selection);
+					}
+				}),
+			);
+			unlisteners.push(
+				await listen('menu-edit-paste', () => {
+					if (editorPane) {
+						editorPane.handlePaste();
+					}
+				}),
+			);
+			unlisteners.push(
+				await listen('menu-edit-select-all', () => {
+					if (editorPane) {
+						editorPane.handleSelectAll();
+					} else if (markdownBody) {
+						// Preview mode: select all rendered content
+						const range = document.createRange();
+						range.selectNodeContents(markdownBody);
+						const sel = window.getSelection();
+						if (sel) {
+							sel.removeAllRanges();
+							sel.addRange(range);
+						}
+					}
+				}),
+			);
+			unlisteners.push(
 				await listen('menu-tab-rename', async (event) => {
 					const tabId = event.payload as string;
 					const tab = tabManager.tabs.find((t) => t.id === tabId);
@@ -2806,7 +2850,7 @@ import { t } from './utils/i18n.js';
 										onBeforeJump={pushScrollHistory} 
 										{collapsedHeaders} 
 										ontoggleFold={toggleFold} 
-										oncopyref={(text: string) => { const tab = tabManager.activeTab; const fn = tab?.path ? tab.path.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, '') || '' : ''; navigator.clipboard.writeText(fn ? `[[${fn}#${text}]]` : `#${text}`).catch(() => invoke('clipboard_write_text', { text: fn ? `[[${fn}#${text}]]` : `#${text}` })); }}
+										oncopyref={(text: string) => { const tab = tabManager.activeTab; const fn = tab?.path ? tab.path.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, '') || '' : ''; writeText(fn ? `[[${fn}#${text}]]` : `#${text}`); }}
 										onjump={(id: string, text: string) => {
 											if (isEditing && editorPane) {
 												editorPane.revealHeader(text);
@@ -2823,7 +2867,7 @@ import { t } from './utils/i18n.js';
 														onClick: () => {
 															const tab = tabManager.activeTab;
 															const fn = tab?.path ? tab.path.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, '') || '' : '';
-																navigator.clipboard.writeText(fn ? `[[${fn}#${item.text}]]` : `#${item.text}`).catch(() => invoke('clipboard_write_text', { text: fn ? `[[${fn}#${item.text}]]` : `#${item.text}` }));
+																writeText(fn ? `[[${fn}#${item.text}]]` : `#${item.text}`);
 															docContextMenu.show = false;
 														} 
 													}

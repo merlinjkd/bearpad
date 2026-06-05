@@ -12,3 +12,5 @@ test.md
 test_image.png
 src-tauri/output.txt
 
+*.pem
+*.p12

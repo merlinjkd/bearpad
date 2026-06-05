@@ -12,7 +12,11 @@
 	import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
 	import { initVimMode } from "monaco-vim";
 	import { openUrl } from "@tauri-apps/plugin-opener";
+	import { writeText, readText, readImage } from "@tauri-apps/plugin-clipboard-manager";
 	import { invoke } from "@tauri-apps/api/core";
+	// In a Tauri webview navigator.clipboard often fails for cross-app copy/paste.
+	// The browser API returns empty string (not an error) for external clipboard
+	// content, so our handlers must fall back to the Tauri plugin explicitly.
 
 	let {
 		value = $bindable(),
@@ -420,6 +424,67 @@
 		editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
 			if (onsave) onsave();
 		});
+		editor.addAction({
+			id: 'editor.action.clipboardCutAction',
+			label: t('menu.cut', uiLanguage),
+			keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX],
+			keybindingContext: 'editorTextFocus',
+			run: () => handleCut(),
+		});
+
+		editor.addAction({
+			id: 'editor.action.clipboardCopyAction',
+			label: t('menu.copy', uiLanguage),
+			keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC],
+			keybindingContext: 'editorTextFocus',
+			run: () => handleCopy(),
+		});
+		editor.addAction({
+			id: 'editor.action.clipboardPasteAction',
+			label: t('menu.paste', uiLanguage),
+			keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV],
+			keybindingContext: 'editorTextFocus',
+			run: () => handlePaste(),
+		});
+		// Monaco's context-menu Paste calls editor.trigger() with the paste action ID,
+		// which routes to Monaco's internal clipboard service. Intercept it so the
+		// context menu Paste uses our handlePaste() (with Tauri fallback) instead.
+		const _originalTrigger = editor.trigger.bind(editor);
+		editor.trigger = (source: string | null | undefined, handlerId: string, payload: any) => {
+			if (handlerId === 'editor.action.clipboardPasteAction' || handlerId === 'paste') {
+				handlePaste();
+				return;
+			}
+			return _originalTrigger(source, handlerId, payload);
+		};
+
+
+		// Intercept native clipboard events (context menu, execCommand) so they
+		// route through our handlers instead of the browser's broken cross-app path.
+		const domNode = editor.getDomNode();
+		const onCopy = async (e: ClipboardEvent) => {
+			if (!editor.hasTextFocus()) return;
+			e.preventDefault();
+			e.stopPropagation();
+			await handleCopy();
+		};
+		const onCut = async (e: ClipboardEvent) => {
+			if (!editor.hasTextFocus()) return;
+			e.preventDefault();
+			e.stopPropagation();
+			await handleCut();
+		};
+		const onPaste = async (e: ClipboardEvent) => {
+			if (!editor.hasTextFocus()) return;
+			e.preventDefault();
+			e.stopPropagation();
+			await handlePaste();
+		};
+		if (domNode) {
+			domNode.addEventListener('copy', onCopy, true);
+			domNode.addEventListener('cut', onCut, true);
+			domNode.addEventListener('paste', onPaste, true);
+		}
 
 		const insertTextAtCursor = (text: string) => {
 			const selection = editor.getSelection();
@@ -717,192 +782,6 @@
 			},
 		);
 
-		// clipboard handling: override Ctrl+C/X/V to use native clipboard API
-		editor.addAction({
-			id: "custom-cut",
-			label: t('menu.cut', uiLanguage),
-			keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX],
-			keybindingContext: "editorTextFocus",
-			run: async (ed) => {
-				const selection = ed.getSelection();
-				if (!selection || selection.isEmpty()) return;
-				const model = ed.getModel();
-				if (!model) return;
-				const text = model.getValueInRange(selection);
-				if (text) {
-					try {
-						await navigator.clipboard.writeText(text);
-					} catch {
-						await invoke("clipboard_write_text", { text }).catch(console.error);
-					}
-					// delete selected text
-					ed.executeEdits("custom-cut", [
-						{ range: selection, text: "", forceMoveMarkers: true },
-					]);
-				}
-			},
-		});
-
-		editor.addAction({
-			id: "custom-copy",
-			label: t('menu.copy', uiLanguage),
-			keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC],
-			keybindingContext: "editorTextFocus",
-			run: async (ed) => {
-				const selection = ed.getSelection();
-				if (!selection || selection.isEmpty()) return;
-				const model = ed.getModel();
-				if (!model) return;
-				const text = model.getValueInRange(selection);
-				if (text) {
-					try {
-						await navigator.clipboard.writeText(text);
-					} catch {
-						await invoke("clipboard_write_text", { text }).catch(console.error);
-					}
-				}
-			},
-		});
-
-		editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, async () => {
-			try {
-				// check for image in clipboard via Rust
-				const base64Image = await invoke("clipboard_read_image", { macosImageScaling: settings.macosImageScaling }).catch(() => null) as string | null;
-				if (base64Image && tabManager.activeTab?.path) {
-					const ext = "png"; // output of Rust command is always PNG
-					const filename = `paste_${Date.now()}.${ext}`;
-
-					const tabPath = tabManager.activeTab.path;
-					const dirMatch = tabPath.match(/^(.*)[/\\][^/\\]+$/);
-					if (dirMatch) {
-						const parentDir = dirMatch[1];
-						const imgDirName = settings.imageDirectory || "img";
-						const relPath = (await invoke("save_image", {
-							parentDir,
-							filename,
-							base64Data: base64Image,
-							imageDirectory: imgDirName,
-						})) as string;
-						// Remove leading slash if imageDirectory was empty, to ensure relative path
-						const escapedPath = relPath.replace(/ /g, "%20").replace(/^\//, "");
-						const embed = `![alt](${escapedPath})`;
-
-						const position = editor.getPosition();
-						if (position) {
-							const selection = editor.getSelection();
-							const range =
-								selection && !selection.isEmpty()
-									? selection
-									: new monaco.Range(
-											position.lineNumber,
-											position.column,
-											position.lineNumber,
-											position.column,
-										);
-
-							editor.executeEdits("paste-image", [
-								{
-									range,
-									text: embed,
-									forceMoveMarkers: true,
-								},
-							]);
-
-							managedImages.push({ embed, filename, parentDir });
-							return;
-						}
-					}
-				}
-
-				// fall through to text paste via native clipboard
-				let rawText = "";
-				try {
-					rawText = await navigator.clipboard.readText();
-				} catch {
-					rawText = await invoke("clipboard_read_text").catch(() => "") as string;
-				}
-				if (!rawText) return;
-				
-				const text = rawText.trim();
-				const urlRegex = /^(?:(?:https?|file|tauri):\/\/|www\.)[^\s]{2,}$/i;
-				const isUrl = urlRegex.test(text);
-
-				const selections = editor.getSelections();
-				const model = editor.getModel();
-				if (!selections || selections.length === 0 || !model) {
-					insertTextAtCursor(rawText);
-					return;
-				}
-
-				// if it's not a URL or we have no multi-line selection/complex case, just insert
-				const hasSelection = selections.some((s) => !s.isEmpty());
-				const isMultiLine = selections.some((s) => s.startLineNumber !== s.endLineNumber);
-
-				if (!isUrl || isMultiLine) {
-					const edits = selections.map(s => ({
-						range: s,
-						text: rawText,
-						forceMoveMarkers: true
-					}));
-					editor.executeEdits("paste-text", edits);
-					return;
-				}
-
-				if (hasSelection) {
-					const edits = selections.map((selection) => {
-						const selectedText = model.getValueInRange(selection);
-						const linkUrl = text.toLowerCase().startsWith("www.")
-							? `http://${text}`
-							: text;
-						return {
-							range: selection,
-							text: `[${selectedText}](${linkUrl})`,
-							forceMoveMarkers: true,
-						};
-					});
-					editor.executeEdits("paste-link", edits);
-				} else {
-					const displayText = text.replace(
-						/^(?:https?|file|tauri):\/\/|www\./i,
-						"",
-					);
-					const linkUrl = text.toLowerCase().startsWith("www.")
-						? `http://${text}`
-						: text;
-					const template = `[${displayText}](${linkUrl})`;
-					const edits = selections.map((selection) => {
-						return {
-							range: selection,
-							text: template,
-							forceMoveMarkers: true,
-						};
-					});
-
-					editor.executeEdits("paste-link", edits);
-
-					let accumulatedShift = 0;
-					let lastLine = -1;
-					const newSelections = selections.map((s) => {
-						if (s.startLineNumber !== lastLine) {
-							accumulatedShift = 0;
-							lastLine = s.startLineNumber;
-						}
-						const startColumn = s.startColumn + accumulatedShift + 1;
-						const endColumn = startColumn + displayText.length;
-						accumulatedShift += template.length;
-						return new monaco.Selection(
-							s.startLineNumber,
-							startColumn,
-							s.startLineNumber,
-							endColumn,
-						);
-					});
-					editor.setSelections(newSelections);
-				}
-			} catch (err) {
-				console.error("Paste failed:", err);
-			}
-		}, "editorTextFocus");
 
 		return () => {
 			window.open = originalOpen;
@@ -930,10 +809,195 @@
 					tabManager.updateTabAnchorLine(currentTabId, anchorLine);
 				}
 			}
+			if (domNode) {
+				domNode.removeEventListener('copy', onCopy, true);
+				domNode.removeEventListener('cut', onCut, true);
+				domNode.removeEventListener('paste', onPaste, true);
+			}
+			editor.trigger = _originalTrigger;
 
 			editor.dispose();
 		};
 	});
+
+	export async function handleCopy(): Promise<void> {
+		if (!editor) return;
+		const selection = editor.getSelection();
+		if (!selection || selection.isEmpty()) return;
+		const model = editor.getModel();
+		if (!model) return;
+		const text = model.getValueInRange(selection);
+		if (!text) return;
+		try {
+			await navigator.clipboard.writeText(text);
+		} catch {
+			await writeText(text);
+		}
+	}
+
+	export async function handleCut(): Promise<void> {
+		if (!editor) return;
+		const selection = editor.getSelection();
+		if (!selection || selection.isEmpty()) return;
+		const model = editor.getModel();
+		if (!model) return;
+		const text = model.getValueInRange(selection);
+		if (!text) return;
+		try {
+			await navigator.clipboard.writeText(text);
+		} catch {
+			await writeText(text);
+		}
+		editor.executeEdits("cut", [
+			{ range: selection, text: "", forceMoveMarkers: true },
+		]);
+	}
+
+	export async function handlePaste(): Promise<void> {
+		if (!editor) return;
+		try {
+			// Try image paste first (falls through silently if no image in clipboard)
+			const img = await readImage().catch(() => null);
+			if (img && tabManager.activeTab?.path) {
+				const rgba = await img.rgba();
+				const size = await img.size();
+				const scale = settings.macosImageScaling ? 0.5 : 1.0;
+				const base64Image = await invoke<string>("encode_png", {
+					rgba: Array.from(rgba),
+					width: size.width,
+					height: size.height,
+					scale,
+				});
+				const ext = "png";
+				const filename = `paste_${Date.now()}.${ext}`;
+				const tabPath = tabManager.activeTab.path;
+				const dirMatch = tabPath.match(/^(.*)[/\\][^/\\]+$/);
+				if (dirMatch) {
+					const parentDir = dirMatch[1];
+					const imgDirName = settings.imageDirectory || "img";
+					const relPath = (await invoke("save_image", {
+						parentDir,
+						filename,
+						base64Data: base64Image,
+						imageDirectory: imgDirName,
+					})) as string;
+					const escapedPath = relPath.replace(/ /g, "%20").replace(/^\//, "");
+					const embed = `![alt](${escapedPath})`;
+					const position = editor.getPosition();
+					if (position) {
+						const selection = editor.getSelection();
+						const range = selection && !selection.isEmpty()
+							? selection
+							: new monaco.Range(
+								position.lineNumber,
+								position.column,
+								position.lineNumber,
+								position.column,
+							);
+						editor.executeEdits("paste-image", [{ range, text: embed, forceMoveMarkers: true }]);
+						return;
+					}
+				}
+			}
+
+			let rawText = '';
+			try {
+				rawText = await navigator.clipboard.readText();
+				if (!rawText) rawText = await readText() ?? '';
+			} catch {
+				rawText = await readText() ?? '';
+			}
+			if (!rawText) return;
+
+			const text = rawText.trim();
+			const urlRegex = /^(?:(?:https?|file|tauri):\/\/|www\.)[^\s]{2,}$/i;
+			const isUrl = urlRegex.test(text);
+
+			const selections = editor.getSelections();
+			const model = editor.getModel();
+			if (!selections || selections.length === 0 || !model) {
+				const position = editor.getPosition();
+				if (position) {
+					const range = new monaco.Range(
+						position.lineNumber,
+						position.column,
+						position.lineNumber,
+						position.column,
+					);
+					editor.executeEdits("paste-text", [{ range, text: rawText, forceMoveMarkers: true }]);
+				}
+				return;
+			}
+
+			const hasSelection = selections.some((s) => !s.isEmpty());
+			const isMultiLine = selections.some((s) => s.startLineNumber !== s.endLineNumber);
+
+			if (!isUrl || isMultiLine) {
+				const edits = selections.map((s) => ({
+					range: s,
+					text: rawText,
+					forceMoveMarkers: true,
+				}));
+				editor.executeEdits("paste-text", edits);
+				return;
+			}
+
+			if (hasSelection) {
+				const edits = selections.map((selection) => {
+					const selectedText = model.getValueInRange(selection);
+					const linkUrl = text.toLowerCase().startsWith("www.")
+						? `http://${text}`
+						: text;
+					return {
+						range: selection,
+						text: `[${selectedText}](${linkUrl})`,
+						forceMoveMarkers: true,
+					};
+				});
+				editor.executeEdits("paste-link", edits);
+			} else {
+				const displayText = text.replace(
+					/^(?:https?|file|tauri):\/\/|www\./i,
+					"",
+				);
+				const linkUrl = text.toLowerCase().startsWith("www.")
+					? `http://${text}`
+					: text;
+				const template = `[${displayText}](${linkUrl})`;
+				const edits = selections.map((selection) => ({
+					range: selection,
+					text: template,
+					forceMoveMarkers: true,
+				}));
+				editor.executeEdits("paste-link", edits);
+				let accumulatedShift = 0;
+				let lastLine = -1;
+				const newSelections = selections.map((s) => {
+					if (s.startLineNumber !== lastLine) {
+						accumulatedShift = 0;
+						lastLine = s.startLineNumber;
+					}
+					const startColumn = s.startColumn + accumulatedShift + 1;
+					const endColumn = startColumn + displayText.length;
+					accumulatedShift += template.length;
+					return new monaco.Selection(
+						s.startLineNumber,
+						startColumn,
+						s.startLineNumber,
+						endColumn,
+					);
+				});
+				editor.setSelections(newSelections);
+			}
+		} catch (err) {
+			console.error("Paste failed:", err);
+		}
+	}
+
+	export function handleSelectAll(): void {
+		if (!editor) return;
+		editor.trigger("menu", "editor.action.selectAll", null);
+	}
 
 	export function syncScrollToLine(line: number, ratio: number = 0) {
 		if (!editor) return;

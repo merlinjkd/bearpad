@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_clipboard_manager;
 
 /// Write `bytes` to `target` durably and atomically: write to a sibling temp
 /// file, fsync it, then rename over the target. Atomic on both Unix and
@@ -619,101 +620,6 @@ fn get_os_type() -> String {
 
 
 #[tauri::command]
-fn clipboard_write_text(text: String) -> Result<(), String> {
-    let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
-    clipboard.set_text(text).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn clipboard_read_text() -> Result<String, String> {
-    let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
-    clipboard.get_text().map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn clipboard_read_image(macos_image_scaling: bool) -> Result<String, String> {
-    let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
-    let image = clipboard.get_image().map_err(|e| e.to_string())?;
-
-    // encode as png
-    let mut png_data = Vec::new();
-    {
-        let encoder = image::codecs::png::PngEncoder::new(&mut png_data);
-        use image::ImageEncoder;
-        
-        // Check if running on macOS and scale image if needed
-        #[cfg(target_os = "macos")]
-        {
-            if macos_image_scaling {
-                // Use image crate for high-quality scaling
-                use image::{DynamicImage, ImageBuffer, Rgba};
-                
-                // Convert arboard Image to ImageBuffer
-                let mut img_buffer = ImageBuffer::new(image.width as u32, image.height as u32);
-                for (x, y, pixel) in img_buffer.enumerate_pixels_mut() {
-                    let idx = (y * image.width as u32 + x) as usize * 4;
-                    if idx + 3 < image.bytes.len() {
-                        *pixel = Rgba([
-                            image.bytes[idx],
-                            image.bytes[idx + 1],
-                            image.bytes[idx + 2],
-                            image.bytes[idx + 3]
-                        ]);
-                    }
-                }
-                
-                // Create DynamicImage
-                let dynamic_image = DynamicImage::ImageRgba8(img_buffer);
-                
-                // Resize with high-quality Lanczos3 filter
-                let resized = dynamic_image.resize(
-                    (image.width / 2) as u32,
-                    (image.height / 2) as u32,
-                    image::imageops::FilterType::Lanczos3
-                );
-                
-                // Write the resized image
-                let resized_rgba = resized.to_rgba8();
-                encoder
-                    .write_image(
-                        resized_rgba.as_raw(),
-                        (image.width / 2) as u32,
-                        (image.height / 2) as u32,
-                        image::ExtendedColorType::Rgba8,
-                    )
-                    .map_err(|e| e.to_string())?;
-            } else {
-                // Use original image if scaling is disabled
-                encoder
-                    .write_image(
-                        image.bytes.as_ref(),
-                        image.width as u32,
-                        image.height as u32,
-                        image::ExtendedColorType::Rgba8,
-                    )
-                    .map_err(|e| e.to_string())?;
-            }
-        }
-        
-        #[cfg(not(target_os = "macos"))]
-        {
-            // For other platforms, use the original image
-            encoder
-                .write_image(
-                    image.bytes.as_ref(),
-                    image.width as u32,
-                    image.height as u32,
-                    image::ExtendedColorType::Rgba8,
-                )
-                .map_err(|e| e.to_string())?;
-        }
-    }
-
-    use base64::{engine::general_purpose, Engine as _};
-    Ok(general_purpose::STANDARD.encode(&png_data))
-}
-
-#[tauri::command]
 fn save_image(parent_dir: String, filename: String, base64_data: String, image_directory: String) -> Result<String, String> {
     let img_dir = Path::new(&parent_dir).join(&image_directory);
     if !img_dir.exists() {
@@ -743,6 +649,36 @@ fn save_image(parent_dir: String, filename: String, base64_data: String, image_d
     };
 
     Ok(rel_path)
+}
+
+#[tauri::command]
+fn encode_png(rgba: Vec<u8>, width: u32, height: u32, scale: f64) -> Result<String, String> {
+    use base64::{engine::general_purpose, Engine as _};
+    use image::codecs::png::PngEncoder;
+    use image::ImageEncoder;
+
+    let mut png_data = Vec::new();
+
+    let (final_data, final_width, final_height) = if (scale - 1.0).abs() > f64::EPSILON && scale > 0.0 {
+        use image::{DynamicImage, ImageBuffer, Rgba, imageops::FilterType};
+
+        let img_buffer = ImageBuffer::<Rgba<u8>, _>::from_raw(width, height, rgba)
+            .ok_or("Failed to create image buffer")?;
+        let dynamic_image = DynamicImage::ImageRgba8(img_buffer);
+        let new_width = (width as f64 * scale).max(1.0) as u32;
+        let new_height = (height as f64 * scale).max(1.0) as u32;
+        let resized = dynamic_image.resize(new_width, new_height, FilterType::Lanczos3);
+        (resized.to_rgba8().into_raw(), new_width, new_height)
+    } else {
+        (rgba, width, height)
+    };
+
+    let encoder = PngEncoder::new(&mut png_data);
+    encoder
+        .write_image(&final_data, final_width, final_height, image::ExtendedColorType::Rgba8)
+        .map_err(|e| e.to_string())?;
+
+    Ok(general_purpose::STANDARD.encode(&png_data))
 }
 
 #[tauri::command]
@@ -858,6 +794,7 @@ pub fn run() {
         })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
             println!("Single Instance Args: {:?}", args);
 
@@ -1024,10 +961,22 @@ pub fn run() {
                     .item(&PredefinedMenuItem::undo(app, None)?)
                     .item(&PredefinedMenuItem::redo(app, None)?)
                     .separator()
-                    .item(&PredefinedMenuItem::cut(app, None)?)
-                    .item(&PredefinedMenuItem::copy(app, None)?)
-                    .item(&PredefinedMenuItem::paste(app, None)?)
-                    .item(&PredefinedMenuItem::select_all(app, None)?)
+                    .item(
+                        &MenuItemBuilder::with_id("menu-edit-cut", "Cut")
+                            .build(app)?,
+                    )
+                    .item(
+                        &MenuItemBuilder::with_id("menu-edit-copy", "Copy")
+                            .build(app)?,
+                    )
+                    .item(
+                        &MenuItemBuilder::with_id("menu-edit-paste", "Paste")
+                            .build(app)?,
+                    )
+                    .item(
+                        &MenuItemBuilder::with_id("menu-edit-select-all", "Select All")
+                            .build(app)?,
+                    )
                     .separator()
                     .item(
                         &MenuItemBuilder::with_id("menu-edit-find", "Find…")
@@ -1094,9 +1043,6 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            clipboard_write_text,
-            clipboard_read_text,
-            clipboard_read_image,
             open_markdown,
             open_markdown_preview,
             render_markdown,
@@ -1122,6 +1068,7 @@ pub fn run() {
             read_vscode_theme,
             delete_vscode_theme,
             save_image,
+            encode_png,
             copy_file_to_img,
             delete_file,
             copy_file,

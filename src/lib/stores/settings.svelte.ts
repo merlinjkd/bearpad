@@ -259,21 +259,21 @@ export class SettingsStore {
 				} else {
 					this.editorFont = defaults.editorFont;
 				}
-				this.editorFontSize = parseFontSize(savedEditorFontSize, 14, 10, 24);
+				this.editorFontSize = parseFontSize(savedEditorFontSize, 18, 10, 24);
 
 				if (savedPreviewFont !== null) {
 					this.previewFont = savedPreviewFont;
 				} else {
 					this.previewFont = defaults.previewFont;
 				}
-				this.previewFontSize = parseFontSize(savedPreviewFontSize, 16, 12, 28);
+				this.previewFontSize = parseFontSize(savedPreviewFontSize, 18, 12, 28);
 
 				if (savedCodeFont !== null) {
 					this.codeFont = savedCodeFont;
 				} else {
 					this.codeFont = defaults.codeFont;
 				}
-				this.codeFontSize = parseFontSize(savedCodeFontSize, 14, 10, 24);
+				this.codeFontSize = parseFontSize(savedCodeFontSize, 18, 10, 24);
 			});
 
 			$effect.root(() => {
@@ -447,15 +447,15 @@ export class SettingsStore {
 	resetEditorFont() {
 		const defaults = DEFAULT_FONTS[this.osType];
 		this.editorFont = defaults.editorFont;
-		this.editorFontSize = 14;
+		this.editorFontSize = 18;
 	}
 
 	resetPreviewFont() {
 		const defaults = DEFAULT_FONTS[this.osType];
 		this.previewFont = defaults.previewFont;
-		this.previewFontSize = 16;
+		this.previewFontSize = 18;
 		this.codeFont = defaults.codeFont;
-		this.codeFontSize = 14;
+		this.codeFontSize = 18;
 	}
 }
 
