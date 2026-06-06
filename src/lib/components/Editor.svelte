@@ -446,9 +446,18 @@
 			keybindingContext: 'editorTextFocus',
 			run: () => handlePaste(),
 		});
-		// Monaco's context-menu Paste calls editor.trigger() with the paste action ID,
-		// which routes to Monaco's internal clipboard service. Intercept it so the
-		// context menu Paste uses our handlePaste() (with Tauri fallback) instead.
+		// Monaco's context-menu Paste routes through the registered action's run()
+		// method, NOT through editor.trigger(). The command service executes the
+		// action directly, so we must override the action's run() method.
+		const pasteAction = editor.getAction('editor.action.clipboardPasteAction');
+		const _originalPasteRun = pasteAction?.run.bind(pasteAction);
+		if (pasteAction && _originalPasteRun) {
+			pasteAction.run = () => {
+				handlePaste();
+			};
+		}
+
+		// Also intercept editor.trigger() for any programmatic calls that DO use it.
 		const _originalTrigger = editor.trigger.bind(editor);
 		editor.trigger = (source: string | null | undefined, handlerId: string, payload: any) => {
 			if (handlerId === 'editor.action.clipboardPasteAction' || handlerId === 'paste') {
@@ -458,33 +467,45 @@
 			return _originalTrigger(source, handlerId, payload);
 		};
 
-
-		// Intercept native clipboard events (context menu, execCommand) so they
+		// Intercept native clipboard events (browser context menu, execCommand) so they
 		// route through our handlers instead of the browser's broken cross-app path.
-		const domNode = editor.getDomNode();
+		// We listen on both the editor DOM node (Monaco's textarea) and window
+		// because native macOS context menus may dispatch paste at the window level.
+		const shouldInterceptForEditor = () => {
+			if (!editor) return false;
+			const domNode = editor.getDomNode();
+			if (!domNode) return false;
+			const active = document.activeElement;
+			// Intercept if editor has text focus OR if the active element is inside the editor
+			return editor.hasTextFocus() || (active != null && domNode.contains(active));
+		};
 		const onCopy = async (e: ClipboardEvent) => {
-			if (!editor.hasTextFocus()) return;
+			if (!shouldInterceptForEditor()) return;
 			e.preventDefault();
 			e.stopPropagation();
 			await handleCopy();
 		};
 		const onCut = async (e: ClipboardEvent) => {
-			if (!editor.hasTextFocus()) return;
+			if (!shouldInterceptForEditor()) return;
 			e.preventDefault();
 			e.stopPropagation();
 			await handleCut();
 		};
 		const onPaste = async (e: ClipboardEvent) => {
-			if (!editor.hasTextFocus()) return;
+			if (!shouldInterceptForEditor()) return;
 			e.preventDefault();
 			e.stopPropagation();
 			await handlePaste();
 		};
-		if (domNode) {
-			domNode.addEventListener('copy', onCopy, true);
-			domNode.addEventListener('cut', onCut, true);
-			domNode.addEventListener('paste', onPaste, true);
+		const editorDomNode = editor.getDomNode();
+		if (editorDomNode) {
+			editorDomNode.addEventListener('copy', onCopy, true);
+			editorDomNode.addEventListener('cut', onCut, true);
+			editorDomNode.addEventListener('paste', onPaste, true);
 		}
+		// Window-level listener catches native context-menu paste that may not
+		// bubble through the editor DOM node (e.g. macOS WKWebView native menu).
+		window.addEventListener('paste', onPaste, true);
 
 		const insertTextAtCursor = (text: string) => {
 			const selection = editor.getSelection();
@@ -809,10 +830,14 @@
 					tabManager.updateTabAnchorLine(currentTabId, anchorLine);
 				}
 			}
-			if (domNode) {
-				domNode.removeEventListener('copy', onCopy, true);
-				domNode.removeEventListener('cut', onCut, true);
-				domNode.removeEventListener('paste', onPaste, true);
+			if (editorDomNode) {
+				editorDomNode.removeEventListener('copy', onCopy, true);
+				editorDomNode.removeEventListener('cut', onCut, true);
+				editorDomNode.removeEventListener('paste', onPaste, true);
+			}
+			window.removeEventListener('paste', onPaste, true);
+			if (pasteAction && _originalPasteRun) {
+				pasteAction.run = _originalPasteRun;
 			}
 			editor.trigger = _originalTrigger;
 
