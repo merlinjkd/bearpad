@@ -85,6 +85,7 @@ export function getLanguage(path: string): string {
 		case "markdown":
 		case "mdown":
 		case "mkd":
+		case "txt":
 			return "markdown";
 		default:
 			return "plaintext";

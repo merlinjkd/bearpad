@@ -362,9 +362,10 @@ pub async fn uninstall_app(
             "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}",
             APP_NAME
         ));
-        let _ = root.delete_subkey_all("Software\\Classes\\.md");
-        let _ = root.delete_subkey_all("Software\\Classes\\.markdown");
-        let _ = root.delete_subkey_all("Software\\Classes\\Bearpad.File");
+		let _ = root.delete_subkey_all("Software\\Classes\\.md");
+		let _ = root.delete_subkey_all("Software\\Classes\\.markdown");
+		let _ = root.delete_subkey_all("Software\\Classes\\.txt");
+		let _ = root.delete_subkey_all("Software\\Classes\\Bearpad.File");
     }
 
     // 3. Self-destruction
@@ -433,14 +434,17 @@ fn register_file_association(exe_path: &Path, all_users: bool) -> Result<(), std
     };
     let root = RegKey::predef(root_h);
 
-    // .md
-    let (md_key, _) = root.create_subkey("Software\\Classes\\.md")?;
-    md_key.set_value("", &"Bearpad.File")?;
+	// .md
+	let (md_key, _) = root.create_subkey("Software\\Classes\\.md")?;
+	md_key.set_value("", &"Bearpad.File")?;
 
-    // .markdown
-    let (markdown_key, _) = root.create_subkey("Software\\Classes\\.markdown")?;
-    markdown_key.set_value("", &"Bearpad.File")?;
+	// .markdown
+	let (markdown_key, _) = root.create_subkey("Software\\Classes\\.markdown")?;
+	markdown_key.set_value("", &"Bearpad.File")?;
 
+	// .txt
+	let (txt_key, _) = root.create_subkey("Software\\Classes\\.txt")?;
+	txt_key.set_value("", &"Bearpad.File")?;
     // Bearpad.File
     let (file_key, _) = root.create_subkey("Software\\Classes\\Bearpad.File")?;
     file_key.set_value("", &"Bearpad File")?;

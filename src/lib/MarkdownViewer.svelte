@@ -1437,7 +1437,7 @@ import { t } from './utils/i18n.js';
 			// Special handling for new (untitled) files
 			const selected = await save({
 				filters: [
-					{ name: 'Markdown', extensions: ['md'] },
+					{ name: 'Markdown & Text', extensions: ['md', 'txt'] },
 					{ name: 'All Files', extensions: ['*'] },
 				],
 			});
@@ -1478,7 +1478,7 @@ import { t } from './utils/i18n.js';
 
 		const selected = await save({
 			filters: [
-				{ name: 'Markdown', extensions: ['md'] },
+				{ name: 'Markdown & Text', extensions: ['md', 'txt'] },
 				{ name: 'All Files', extensions: ['*'] },
 			],
 			defaultPath: tab.path || undefined,
@@ -1638,7 +1638,7 @@ import { t } from './utils/i18n.js';
 		const selected = await open({
 			multiple: false,
 			filters: [
-				{ name: 'Markdown', extensions: ['md', 'markdown', 'mdown', 'mkd'] },
+				{ name: 'Markdown & Text', extensions: ['md', 'markdown', 'mdown', 'mkd', 'txt'] },
 				{ name: 'All Files', extensions: ['*'] },
 			],
 		});
