@@ -444,28 +444,36 @@
 			label: t('menu.paste', uiLanguage),
 			keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV],
 			keybindingContext: 'editorTextFocus',
-			run: () => handlePaste(),
+			// run: () => handlePaste(), // Deliberately omitted — Monaco's native
+			// paste handler works correctly once navigator.clipboard.readText is
+			// overridden to use the system clipboard (see below).  We keep the
+			// keybinding registration so Monaco knows the shortcut exists, but let
+			// the browser's native paste event (captured by our onPaste listener)
+			// and Monaco's internal trigger('paste', ...) paths do the insertion.
+			run: () => {}, // no-op: actual paste happens via native event or Monaco handler
 		});
-		// Monaco's context-menu Paste routes through the registered action's run()
-		// method, NOT through editor.trigger(). The command service executes the
-		// action directly, so we must override the action's run() method.
-		const pasteAction = editor.getAction('editor.action.clipboardPasteAction');
-		const _originalPasteRun = pasteAction?.run.bind(pasteAction);
-		if (pasteAction && _originalPasteRun) {
-			pasteAction.run = () => {
-				handlePaste();
-			};
-		}
 
-		// Also intercept editor.trigger() for any programmatic calls that DO use it.
-		const _originalTrigger = editor.trigger.bind(editor);
-		editor.trigger = (source: string | null | undefined, handlerId: string, payload: any) => {
-			if (handlerId === 'editor.action.clipboardPasteAction' || handlerId === 'paste') {
-				handlePaste();
-				return;
-			}
-			return _originalTrigger(source, handlerId, payload);
-		};
+		// Monaco's internal clipboard service calls navigator.clipboard.readText()
+		// to obtain the clipboard contents for its context-menu Paste action.
+		// In a Tauri webview this API returns empty string for cross-app content,
+		// so Monaco never reaches editor.trigger('paste', ...) and our overrides
+		// above never fire.  Redirect the browser API to the Tauri plugin so
+		// Monaco's native paste handler receives real text.
+		if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+			Object.defineProperty(navigator.clipboard, 'readText', {
+				value: async () => {
+					try {
+						const text = await readText();
+						return text ?? '';
+					} catch (e) {
+						console.error('Tauri clipboard readText error:', e);
+						return '';
+					}
+				},
+				writable: true,
+				configurable: true,
+			});
+		}
 
 		// Intercept native clipboard events (browser context menu, execCommand) so they
 		// route through our handlers instead of the browser's broken cross-app path.
@@ -836,10 +844,6 @@
 				editorDomNode.removeEventListener('paste', onPaste, true);
 			}
 			window.removeEventListener('paste', onPaste, true);
-			if (pasteAction && _originalPasteRun) {
-				pasteAction.run = _originalPasteRun;
-			}
-			editor.trigger = _originalTrigger;
 
 			editor.dispose();
 		};
