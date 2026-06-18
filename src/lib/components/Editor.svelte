@@ -857,11 +857,7 @@
 		if (!model) return;
 		const text = model.getValueInRange(selection);
 		if (!text) return;
-		try {
-			await navigator.clipboard.writeText(text);
-		} catch {
-			await writeText(text);
-		}
+		await writeText(text);
 	}
 
 	export async function handleCut(): Promise<void> {
@@ -872,11 +868,7 @@
 		if (!model) return;
 		const text = model.getValueInRange(selection);
 		if (!text) return;
-		try {
-			await navigator.clipboard.writeText(text);
-		} catch {
-			await writeText(text);
-		}
+		await writeText(text);
 		editor.executeEdits("cut", [
 			{ range: selection, text: "", forceMoveMarkers: true },
 		]);

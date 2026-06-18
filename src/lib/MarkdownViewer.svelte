@@ -1804,6 +1804,14 @@ import { t } from './utils/i18n.js';
 				...mediaItems,
 				...(isEditing && isInsideEditor
 					? [
+							...(editorPane?.hasSelection()
+								? [
+										{ label: t('menu.cut', uiLanguage), shortcut: 'Ctrl+X', onClick: () => editorPane?.handleCut() },
+										{ label: t('menu.copy', uiLanguage), shortcut: 'Ctrl+C', onClick: () => editorPane?.handleCopy() },
+									]
+								: []),
+							{ label: t('menu.paste', uiLanguage), shortcut: 'Ctrl+V', onClick: () => editorPane?.handlePaste() },
+							{ separator: true },
 							{ label: t('menu.undo', uiLanguage), shortcut: 'Ctrl+Z', onClick: () => editorPane?.undo() },
 							{ label: t('menu.redo', uiLanguage), shortcut: 'Ctrl+Y', onClick: () => editorPane?.redo() },
 							{ separator: true }
