@@ -450,7 +450,7 @@
 			// keybinding registration so Monaco knows the shortcut exists, but let
 			// the browser's native paste event (captured by our onPaste listener)
 			// and Monaco's internal trigger('paste', ...) paths do the insertion.
-			run: () => {}, // no-op: actual paste happens via native event or Monaco handler
+			run: () => handlePaste(), // paste via our handler so clipboard works cross-app
 		});
 
 		// Monaco's internal clipboard service calls navigator.clipboard.readText()
