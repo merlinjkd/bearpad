@@ -185,6 +185,7 @@
 				: "off",
 			fontSize: settings.editorFontSize,
 			fontFamily: settings.editorFont,
+			contextmenu: false,
 			wordBasedSuggestions: "off",
 			quickSuggestions: false,
 			renderWhitespace: settings.showWhitespace ? "trailing" : "none",

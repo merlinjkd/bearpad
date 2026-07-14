@@ -1802,30 +1802,26 @@ import { t } from './utils/i18n.js';
 			items: [
 				...copyRefItem,
 				...mediaItems,
-				...(isEditing && isInsideEditor
-					? [
-							...(editorPane?.hasSelection()
-								? [
-										{ label: t('menu.cut', uiLanguage), shortcut: 'Ctrl+X', onClick: () => editorPane?.handleCut() },
-										{ label: t('menu.copy', uiLanguage), shortcut: 'Ctrl+C', onClick: () => editorPane?.handleCopy() },
-									]
-								: []),
-							{ label: t('menu.paste', uiLanguage), shortcut: 'Ctrl+V', onClick: () => editorPane?.handlePaste() },
-							{ separator: true },
-							{ label: t('menu.undo', uiLanguage), shortcut: 'Ctrl+Z', onClick: () => editorPane?.undo() },
-							{ label: t('menu.redo', uiLanguage), shortcut: 'Ctrl+Y', onClick: () => editorPane?.redo() },
-							{ separator: true }
-						]
-					: []),
-				...(isEditing && isInsideEditor && editorPane?.hasSelection()
-					? [
-							{ label: t('menu.lowercase', uiLanguage), onClick: () => { editorPane?.transformSelection('lowercase'); docContextMenu.show = false; } },
-							{ label: t('menu.uppercase', uiLanguage), onClick: () => { editorPane?.transformSelection('uppercase'); docContextMenu.show = false; } },
-							{ label: t('menu.propercase', uiLanguage), onClick: () => { editorPane?.transformSelection('propercase'); docContextMenu.show = false; } },
-							{ separator: true }
-						]
-					: []),
-				...(hasSelection ? [{ label: t('menu.copy', uiLanguage), onClick: () => {
+		...(isEditing && isInsideEditor
+			? [
+					...(editorPane?.hasSelection()
+						? [
+							{ label: t('menu.cut', uiLanguage), shortcut: 'Ctrl+X', onClick: () => editorPane?.handleCut() },
+							{ label: t('menu.copy', uiLanguage), shortcut: 'Ctrl+C', onClick: () => editorPane?.handleCopy() },
+							]
+						: []),
+					{ label: t('menu.paste', uiLanguage), shortcut: 'Ctrl+V', onClick: () => editorPane?.handlePaste() },
+					{ separator: true },
+					{ label: t('menu.undo', uiLanguage), shortcut: 'Ctrl+Z', onClick: () => editorPane?.undo() },
+					{ label: t('menu.redo', uiLanguage), shortcut: 'Ctrl+Y', onClick: () => editorPane?.redo() },
+					{ separator: true },
+					{ label: t('menu.lowercase', uiLanguage), disabled: !editorPane?.hasSelection(), onClick: () => { editorPane?.transformSelection('lowercase'); docContextMenu.show = false; } },
+					{ label: t('menu.uppercase', uiLanguage), disabled: !editorPane?.hasSelection(), onClick: () => { editorPane?.transformSelection('uppercase'); docContextMenu.show = false; } },
+					{ label: t('menu.propercase', uiLanguage), disabled: !editorPane?.hasSelection(), onClick: () => { editorPane?.transformSelection('propercase'); docContextMenu.show = false; } },
+					{ separator: true }
+				]
+			: []),
+		...(hasSelection ? [{ label: t('menu.copy', uiLanguage), onClick: () => {
 					const selection = window.getSelection()?.toString();
 					if (selection) writeText(selection);
 				} }] : []),
