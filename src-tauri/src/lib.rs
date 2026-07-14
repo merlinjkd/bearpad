@@ -963,14 +963,17 @@ pub fn run() {
                     .separator()
                     .item(
                         &MenuItemBuilder::with_id("menu-edit-cut", "Cut")
+                            .accelerator("CmdOrCtrl+X")
                             .build(app)?,
                     )
                     .item(
                         &MenuItemBuilder::with_id("menu-edit-copy", "Copy")
+                            .accelerator("CmdOrCtrl+C")
                             .build(app)?,
                     )
                     .item(
                         &MenuItemBuilder::with_id("menu-edit-paste", "Paste")
+                            .accelerator("CmdOrCtrl+V")
                             .build(app)?,
                     )
                     .item(

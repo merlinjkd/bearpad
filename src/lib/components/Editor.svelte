@@ -459,21 +459,28 @@
 		// so Monaco never reaches editor.trigger('paste', ...) and our overrides
 		// above never fire.  Redirect the browser API to the Tauri plugin so
 		// Monaco's native paste handler receives real text.
-		if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
-			Object.defineProperty(navigator.clipboard, 'readText', {
-				value: async () => {
-					try {
-						const text = await readText();
-						return text ?? '';
-					} catch (e) {
-						console.error('Tauri clipboard readText error:', e);
-						return '';
+				// WKWebView on macOS sometimes freezes `navigator.clipboard` or makes
+				// readText non-reconfigurable.  Wrap in try-catch so a TypeError there
+				// doesn't silently kill clipboard setup.
+				try {
+					if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+						Object.defineProperty(navigator.clipboard, 'readText', {
+							value: async () => {
+								try {
+									const text = await readText();
+									return text ?? '';
+								} catch (e) {
+									console.error('Tauri clipboard readText error:', e);
+									return '';
+								}
+							},
+							writable: true,
+							configurable: true,
+						});
 					}
-				},
-				writable: true,
-				configurable: true,
-			});
-		}
+				} catch (e) {
+					console.warn('Could not override navigator.clipboard.readText, falling back to event-based paste:', e);
+				}
 
 		// Intercept native clipboard events (browser context menu, execCommand) so they
 		// route through our handlers instead of the browser's broken cross-app path.
