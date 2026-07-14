@@ -112,7 +112,8 @@ export const translations: Record<LanguageCode, Translation> = {
             themeDefault: 'Default',
             themeDefaultLight: 'Default Light',
             themeDefaultDark: 'Default Dark',
-            themeFollowSystem: 'Follow System'
+            themeFollowSystem: 'Follow System',
+            uiFontSize: 'UI Font Size'
         },
         colors: {
             default: 'Default',

@@ -703,6 +703,22 @@
 							<span class="toggle-slider"></span>
 						</label>
 					</div>
+
+						<div class="setting-item">
+							<label for="appearance-ui-font-size">{t('settings.uiFontSize', settings.language)}</label>
+							<div class="slider-container">
+								<div class="number-input-wrapper horizontal">
+									<button class="spin-btn minus" onclick={() => (settings.uiFontSize = Math.max(10, settings.uiFontSize - 1))} aria-label="Decrease">
+										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+									</button>
+									<input type="number" id="appearance-ui-font-size" min="10" max="28" bind:value={settings.uiFontSize} class="number-input" />
+									<button class="spin-btn plus" onclick={() => (settings.uiFontSize = Math.min(28, settings.uiFontSize + 1))} aria-label="Increase">
+										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+									</button>
+								</div>
+								<span class="slider-value">px</span>
+							</div>
+						</div>
 					</div>
 					{:else if activeCategory === 'files'}
 					<div class="settings-group">
@@ -770,7 +786,7 @@
 	}
 
 	.settings-header h1 {
-		font-size: 16px;
+		font-size: var(--ui-font-size);
 		font-weight: 600;
 		margin: 0;
 	}
@@ -817,7 +833,7 @@
 		background: transparent;
 		cursor: pointer;
 		border-radius: 6px;
-		font-size: 13px;
+		font-size: var(--ui-font-size);
 		color: var(--color-fg-default);
 		text-align: left;
 	}
@@ -852,7 +868,7 @@
 		cursor: pointer;
 		border-radius: 6px;
 		opacity: 0.5;
-		font-size: 13px;
+		font-size: var(--ui-font-size);
 		color: var(--color-fg-default);
 		text-align: left;
 		transition: all 0.1s;
@@ -886,7 +902,7 @@
 
 	.github-btn .version-code {
 		margin-left: auto;
-		font-size: 11px;
+		font-size: var(--ui-font-size);
 		color: var(--color-fg-muted);
 		margin-top: 2px;
 	}
@@ -899,7 +915,7 @@
 	}
 
 	.settings-group h2 {
-		font-size: 16px;
+		font-size: var(--ui-font-size);
 		font-weight: 600;
 		margin: 0 0 16px 0;
 		color: var(--color-fg-default);
@@ -913,7 +929,7 @@
 	}
 
 	.settings-group-header h2 {
-		font-size: 16px;
+		font-size: var(--ui-font-size);
 		font-weight: 600;
 		margin: 0;
 		color: var(--color-fg-default);
@@ -923,7 +939,7 @@
 		background: transparent;
 		border: none;
 		color: var(--color-fg-muted);
-		font-size: 13px;
+		font-size: var(--ui-font-size);
 		cursor: pointer;
 		padding: 0;
 		transition: all 0.1s;
@@ -948,7 +964,7 @@
 	}
 
 	.setting-item label:first-child {
-		font-size: 13px;
+		font-size: var(--ui-font-size);
 		color: var(--color-fg-default);
 		display: flex;
 		align-items: center;
@@ -974,7 +990,7 @@
 		border-radius: 6px;
 		background-color: var(--color-canvas-default);
 		color: var(--color-fg-default);
-		font-size: 13px;
+		font-size: var(--ui-font-size);
 		min-width: 160px;
 		cursor: pointer;
 		appearance: none;
@@ -1019,7 +1035,7 @@
 		border: none;
 		color: var(--color-fg-default);
 		font-family: inherit;
-		font-size: 13px;
+		font-size: var(--ui-font-size);
 		text-align: right;
 		-moz-appearance: textfield;
 		outline: none;
@@ -1073,7 +1089,7 @@
 		border-radius: 6px;
 		color: var(--color-fg-default);
 		padding: 6px 10px;
-		font-size: 13px;
+		font-size: var(--ui-font-size);
 		outline: none;
 	}
 
@@ -1087,7 +1103,7 @@
 		border-radius: 6px;
 		color: var(--color-fg-default);
 		padding: 6px 12px;
-		font-size: 13px;
+		font-size: var(--ui-font-size);
 		cursor: pointer;
 		outline: none;
 		transition: all 0.1s;
@@ -1111,7 +1127,7 @@
 	}
 
 	.slider-value {
-		font-size: 12px;
+		font-size: var(--ui-font-size);
 		color: var(--color-fg-muted);
 	}
 
@@ -1186,7 +1202,7 @@
 		border: 1px solid var(--color-border-default);
 		border-radius: 4px;
 		color: var(--color-fg-default);
-		font-size: 13px;
+		font-size: var(--ui-font-size);
 		font-family: inherit;
 		cursor: pointer;
 		outline: none;
@@ -1220,7 +1236,7 @@
 		border: none;
 		text-align: left;
 		padding: 6px 12px;
-		font-size: 13px;
+		font-size: var(--ui-font-size);
 		color: var(--color-fg-default);
 		cursor: pointer;
 		border-radius: 4px;

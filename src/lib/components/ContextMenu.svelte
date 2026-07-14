@@ -122,7 +122,7 @@
 		align-items: center;
 		padding: 6px 12px;
 		height: auto;
-		font-size: 13px;
+		font-size: var(--ui-font-size, 13px);
 		color: var(--color-fg-default);
 		font-family: inherit;
 		background: transparent;

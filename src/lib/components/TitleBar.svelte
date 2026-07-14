@@ -901,7 +901,7 @@
 		align-items: center;
 		padding: 6px 12px;
 		height: auto;
-		font-size: 13px;
+		font-size: var(--ui-font-size);
 		color: var(--color-fg-default);
 		font-family: var(--win-font);
 		gap: 8px;
@@ -928,7 +928,7 @@
 	.title-actions.show-dropdown .action-label {
 		display: block;
 		margin-left: 0;
-		font-size: 13px;
+		font-size: var(--ui-font-size);
 		text-align: left;
 		white-space: nowrap;
 		overflow: hidden;
@@ -966,7 +966,7 @@
 		align-items: center;
 		padding: 6px 12px;
 		height: auto;
-		font-size: 13px;
+		font-size: var(--ui-font-size);
 		color: var(--color-fg-default);
 		font-family: var(--win-font);
 		gap: 8px;
@@ -1051,7 +1051,7 @@
 	}
 
 	.window-title {
-		font-size: 12px;
+		font-size: var(--ui-font-size);
 		transition: opacity 0.2s;
 		white-space: nowrap;
 		overflow: hidden;
@@ -1119,7 +1119,7 @@
 		border: 1px solid var(--color-border-default);
 		border-radius: 4px;
 		padding: 2px 8px;
-		font-size: 11px;
+		font-size: var(--ui-font-size);
 		cursor: pointer;
 		margin-right: 8px;
 		display: flex;
@@ -1202,7 +1202,7 @@
 		color: var(--color-fg-default);
 		padding: 4px 8px;
 		border-radius: 6px;
-		font-size: 11px;
+		font-size: var(--ui-font-size);
 		font-family: var(--win-font), 'Segoe UI', sans-serif;
 		pointer-events: none;
 		z-index: 10005;
@@ -1249,7 +1249,7 @@
 
 	.tooltip-shortcut {
 		color: var(--color-fg-muted);
-		font-size: 10px;
+		font-size: var(--ui-font-size);
 		font-family: inherit;
 	}
 
@@ -1286,7 +1286,7 @@
 		border: none;
 		text-align: left;
 		padding: 6px 12px;
-		font-size: 12px;
+		font-size: var(--ui-font-size);
 		color: var(--color-fg-default);
 		cursor: pointer;
 		border-radius: 4px;
@@ -1305,7 +1305,7 @@
 	.menu-shortcut {
 		display: none;
 		margin-left: auto;
-		font-size: 11px;
+		font-size: var(--ui-font-size);
 		color: var(--color-fg-muted);
 		white-space: nowrap;
 		flex-shrink: 0;
@@ -1347,7 +1347,7 @@
 		border: none;
 		text-align: left;
 		padding: 6px 12px;
-		font-size: 13px;
+		font-size: var(--ui-font-size);
 		color: var(--color-fg-default);
 		cursor: pointer;
 		border-radius: 4px;
@@ -1375,7 +1375,7 @@
 		width: 100%;
 		text-align: center;
 		padding: 6px 12px;
-		font-size: 11px;
+		font-size: var(--ui-font-size);
 		color: var(--color-fg-subtle);
 		background-color: transparent;
 		text-decoration: none;

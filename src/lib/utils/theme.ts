@@ -1,5 +1,3 @@
-import * as monaco from 'monaco-editor';
-
 export async function parseAndApplyVscodeTheme(themeJsonStr: string, name: string) {
     const cleanJson = themeJsonStr.replace(/\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g, (m, g) => g ? "" : m);
     let theme;
@@ -70,38 +68,6 @@ export async function parseAndApplyVscodeTheme(themeJsonStr: string, name: strin
         const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
         const wsColor = luminance > 0.5 ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.15)';
         document.documentElement.style.setProperty('--color-whitespace', wsColor);
-    }
-
-    try {
-        if (monaco) {
-            const rules: any[] = [];
-            const tokenColors = theme.tokenColors || [];
-            
-            for (const item of tokenColors) {
-                if (!item.settings || (!item.settings.foreground && !item.settings.fontStyle)) continue;
-                
-                const scopes = Array.isArray(item.scope) ? item.scope : [item.scope];
-                for (let scope of scopes) {
-                    if (!scope) continue;
-                    rules.push({
-                        token: scope,
-                        foreground: item.settings.foreground?.replace('#', ''),
-                        fontStyle: item.settings.fontStyle
-                    });
-                }
-            }
-            
-            monaco.editor.defineTheme('vscode-custom', {
-                base: isDark ? 'vs-dark' : 'vs',
-                inherit: true,
-                rules: rules,
-                colors: colors
-            });
-            
-            monaco.editor.setTheme('vscode-custom');
-        }
-    } catch (e) {
-        console.error("Monaco theme application failed:", e);
     }
 }
 

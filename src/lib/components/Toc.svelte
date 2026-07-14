@@ -365,7 +365,7 @@
 	.toc-empty {
 		padding: 16px;
 		color: var(--color-fg-muted);
-		font-size: 13px;
+		font-size: var(--ui-font-size);
 		text-align: center;
 	}
 
@@ -424,7 +424,7 @@
 		border: none;
 		padding: 3px 16px 3px 4px;
 		color: var(--color-fg-muted);
-		font-size: 13px;
+		font-size: var(--ui-font-size);
 		cursor: pointer;
 		transition: color 0.1s ease;
 		white-space: nowrap;
@@ -454,7 +454,7 @@
 		align-items: center;
 		gap: 5px;
 		padding-left: 16px;
-		font-size: 12.5px;
+		font-size: var(--ui-font-size);
 	}
 
 	.block-icon {
@@ -462,9 +462,9 @@
 		opacity: 0.4;
 	}
 
-	.level-1 .toc-link { font-weight: 500; font-size: 13px; }
-	.level-3 .toc-link { font-size: 12.5px; }
-	.level-4 .toc-link { font-size: 12px; opacity: 0.9; }
-	.level-5 .toc-link { font-size: 12px; opacity: 0.8; }
-	.level-6 .toc-link { font-size: 12px; opacity: 0.7; }
+	.level-1 .toc-link { font-weight: 500; font-size: var(--ui-font-size); }
+	.level-3 .toc-link { font-size: var(--ui-font-size); }
+	.level-4 .toc-link { font-size: var(--ui-font-size); opacity: 0.9; }
+	.level-5 .toc-link { font-size: var(--ui-font-size); opacity: 0.8; }
+	.level-6 .toc-link { font-size: var(--ui-font-size); opacity: 0.7; }
 </style>

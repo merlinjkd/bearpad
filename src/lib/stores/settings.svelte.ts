@@ -161,6 +161,7 @@ export class SettingsStore {
 	previewFontSize = $state(16);
 	codeFont = $state('Consolas');
 	codeFontSize = $state(14);
+	uiFontSize = $state(14);
 
 	// File-save behavior. autoSave = silently persist edits without Cmd+S.
 	// confirmBeforeSave = if true, keep the unsaved-changes modals on close/toggle
@@ -200,6 +201,7 @@ export class SettingsStore {
 			const savedPreviewFontSize = localStorage.getItem('preview.fontSize');
 			const savedCodeFont = localStorage.getItem('preview.codeFont');
 			const savedCodeFontSize = localStorage.getItem('preview.codeFontSize');
+			const savedUiFontSize = localStorage.getItem('editor.uiFontSize');
 
 			const savedAutoSave = localStorage.getItem('editor.autoSave');
 			const savedConfirmBeforeSave = localStorage.getItem('editor.confirmBeforeSave');
@@ -274,7 +276,8 @@ export class SettingsStore {
 					this.codeFont = defaults.codeFont;
 				}
 				this.codeFontSize = parseFontSize(savedCodeFontSize, 18, 10, 24);
-			});
+				this.uiFontSize = parseFontSize(savedUiFontSize, 14, 10, 28);
+				});
 
 			$effect.root(() => {
 				$effect(() => {
@@ -308,6 +311,7 @@ export class SettingsStore {
 					localStorage.setItem('preview.codeFontSize', String(this.codeFontSize));
 					localStorage.setItem('editor.autoSave', String(this.autoSave));
 					localStorage.setItem('editor.confirmBeforeSave', String(this.confirmBeforeSave));
+					localStorage.setItem('editor.uiFontSize', String(this.uiFontSize));
 					if (this.preZenState) {
 						localStorage.setItem('editor.preZenState', JSON.stringify(this.preZenState));
 					} else {

@@ -135,7 +135,7 @@
 		cursor: pointer;
 		font-weight: 500;
 		font-family: var(--win-font);
-		font-size: 14px;
+		font-size: var(--ui-font-size, 14px);
 		transition: all 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
 		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 		display: inline-flex;
@@ -187,14 +187,14 @@
 	}
 
 	.empty-recent {
-		font-size: 14px;
+		font-size: var(--ui-font-size, 14px);
 		margin-bottom: 20px;
 		opacity: 0.5;
 		text-align: center;
 	}
 
 	.recent-section h3 {
-		font-size: 14px;
+		font-size: var(--ui-font-size, 14px);
 		font-weight: 600;
 		margin-bottom: 20px;
 		opacity: 0.8;
@@ -252,7 +252,7 @@
 	}
 
 	.file-name {
-		font-size: 13px;
+		font-size: var(--ui-font-size, 13px);
 		font-weight: 500;
 		overflow: hidden;
 		text-overflow: ellipsis;

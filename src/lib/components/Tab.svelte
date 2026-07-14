@@ -103,7 +103,7 @@
 		color: var(--color-fg-muted);
 		user-select: none;
 		position: relative;
-		font-size: 12px;
+		font-size: var(--ui-font-size);
 		font-family: var(--win-font, 'Segoe UI', sans-serif);
 		border-radius: 8px;
 		transition:

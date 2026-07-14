@@ -51,6 +51,10 @@ import { t } from './utils/i18n.js';
 		uiLanguage = settings.language;
 	});
 
+	$effect(() => {
+		document.documentElement.style.setProperty('--ui-font-size', settings.uiFontSize + 'px');
+	});
+
 	let recentFiles = $state<string[]>([]);
 	let isFocused = $state(true);
 	

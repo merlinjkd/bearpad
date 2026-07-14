@@ -158,7 +158,7 @@
 
 	.modal-header h3 {
 		margin: 0;
-		font-size: 16px;
+		font-size: var(--ui-font-size, 16px);
 		font-weight: 600;
 		color: var(--color-fg-default);
 	}
@@ -169,7 +169,7 @@
 
 	.modal-body p {
 		margin: 0;
-		font-size: 14px;
+		font-size: var(--ui-font-size, 14px);
 		line-height: 1.5;
 		color: var(--color-fg-muted);
 	}
@@ -191,7 +191,7 @@
 	.modal-btn {
 		padding: 6px 16px;
 		border-radius: 6px;
-		font-size: 14px;
+		font-size: var(--ui-font-size, 14px);
 		font-weight: 500;
 		cursor: pointer;
 		transition: all 0.1s;

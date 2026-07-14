@@ -400,7 +400,7 @@
 		border-radius: 6px;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 		font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-		font-size: 12px;
+		font-size: var(--ui-font-size, 12px);
 		color: var(--text-primary, var(--color-fg-default));
 		user-select: none;
 	}
