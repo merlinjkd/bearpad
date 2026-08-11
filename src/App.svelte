@@ -85,6 +85,8 @@
 				menuItem('paste'),
 				{ separator: true },
 				menuItem('find'),
+				menuItem('findAll'),
+				menuItem('replaceAllMatches'),
 			],
 		},
 		{

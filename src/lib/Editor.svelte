@@ -5,7 +5,7 @@
 	import { defaultKeymap, history, historyKeymap, undo, redo } from '@codemirror/commands';
 	import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 	import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
-	import { searchKeymap, search, highlightSelectionMatches, openSearchPanel } from '@codemirror/search';
+	import { searchKeymap, search, highlightSelectionMatches, openSearchPanel, selectMatches, replaceAll } from '@codemirror/search';
 	import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 	import { writeText, readText } from '@tauri-apps/plugin-clipboard-manager';
 	import { invoke } from '@tauri-apps/api/core';
@@ -24,6 +24,8 @@
 		redo: () => void;
 		handleSelectAll: () => void;
 		openFind: () => void;
+		findAll: () => void;
+		replaceAllMatches: () => void;
 		transformSelection: (type: 'lowercase' | 'uppercase' | 'propercase') => void;
 		markSaved: () => void;
 		isDirty: () => boolean;
@@ -323,6 +325,14 @@
 
 				openFind: () => {
 					openSearchPanel(view);
+				},
+
+				findAll: () => {
+					selectMatches(view);
+				},
+
+				replaceAllMatches: () => {
+					replaceAll(view);
 				},
 
 				transformSelection: (type: TransformType) => {
