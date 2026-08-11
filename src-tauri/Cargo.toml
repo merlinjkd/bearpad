@@ -1,6 +1,6 @@
 [package]
 name = "bearpad"
-version = "0.2.0"
+version = "0.2.1"
 description = "Bearpad - a fast, local markdown/text editor"
 authors = ["you"]
 edition = "2021"
