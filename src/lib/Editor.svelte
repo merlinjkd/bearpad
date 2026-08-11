@@ -5,7 +5,7 @@
 	import { defaultKeymap, history, historyKeymap, undo, redo } from '@codemirror/commands';
 	import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 	import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
-	import { searchKeymap } from '@codemirror/search';
+	import { searchKeymap, search, highlightSelectionMatches } from '@codemirror/search';
 	import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 	import { writeText, readText } from '@tauri-apps/plugin-clipboard-manager';
 	import { invoke } from '@tauri-apps/api/core';
@@ -176,6 +176,8 @@
 			extensions: [
 				history(),
 				keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, ...completionKeymap]),
+				search({ top: true }),
+				highlightSelectionMatches(),
 				markdown({ base: markdownLanguage }),
 				syntaxHighlighting(defaultHighlightStyle),
 				autocompletion(),
