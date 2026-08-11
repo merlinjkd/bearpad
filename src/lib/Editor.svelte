@@ -125,6 +125,23 @@
 	}
 
 	function computeTheme(themeName: string) {
+		const searchPanelDark = {
+			'.cm-panel.cm-panel-search': {
+				backgroundColor: '#252526',
+				color: '#d4d4d4',
+			},
+			'.cm-panel.cm-panel-search input': {
+				backgroundColor: '#3c3c3c',
+				color: '#d4d4d4',
+				border: '1px solid #555',
+			},
+			'.cm-panel.cm-panel-search button': {
+				backgroundColor: '#3c3c3c',
+				color: '#d4d4d4',
+				border: '1px solid #555',
+			},
+			'.cm-panel.cm-panel-search label': { color: '#d4d4d4' },
+		};
 		if (themeName === 'light') {
 			return EditorView.theme({
 				'&': { backgroundColor: '#ffffff', color: '#333333', height: '100%' },
@@ -147,6 +164,7 @@
 				'.cm-selectionBackground': { backgroundColor: 'rgba(31, 111, 235, 0.3)' },
 				'.cm-focused .cm-selectionBackground': { backgroundColor: 'rgba(31, 111, 235, 0.3)' },
 				'.cm-matchingBracket': { backgroundColor: '#30363d' },
+				...searchPanelDark,
 			});
 		}
 		return EditorView.theme({
@@ -158,6 +176,7 @@
 			'.cm-selectionBackground': { backgroundColor: '#264f78' },
 			'.cm-focused .cm-selectionBackground': { backgroundColor: '#264f78' },
 			'.cm-matchingBracket': { backgroundColor: '#4b4b4b' },
+			...searchPanelDark,
 		});
 	}
 
