@@ -83,10 +83,6 @@
 				menuItem('cut'),
 				menuItem('copy'),
 				menuItem('paste'),
-				{ separator: true },
-				menuItem('lowercase'),
-				menuItem('uppercase'),
-				menuItem('propercase'),
 			],
 		},
 		{
@@ -118,6 +114,10 @@
 					action: () => handleSettingsChange({ spellcheck: !spellcheck }),
 				},
 			],
+		},
+		{
+			label: 'Text',
+			items: [menuItem('lowercase'), menuItem('uppercase'), menuItem('propercase')],
 		},
 	];
 
