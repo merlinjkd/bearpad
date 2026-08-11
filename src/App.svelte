@@ -83,6 +83,8 @@
 				menuItem('cut'),
 				menuItem('copy'),
 				menuItem('paste'),
+				{ separator: true },
+				menuItem('find'),
 			],
 		},
 		{

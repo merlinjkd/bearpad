@@ -28,6 +28,7 @@ type EditorLike = Pick<
 	| 'undo'
 	| 'redo'
 	| 'handleSelectAll'
+	| 'openFind'
 	| 'transformSelection'
 >;
 
@@ -46,6 +47,7 @@ export function editorCommands(ed: () => EditorLike | null): CommandMap {
 		copy: { label: 'Copy', shortcut: () => mod + 'C', run: () => sel()?.handleCopy() },
 		paste: { label: 'Paste', shortcut: () => mod + 'V', run: () => sel()?.handlePaste() },
 		selectAll: { label: 'Select All', shortcut: () => mod + 'A', run: () => sel()?.handleSelectAll() },
+		find: { label: 'Find & Replace...', shortcut: () => mod + 'F', run: () => sel()?.openFind() },
 		lowercase: { label: 'lowercase', run: () => sel()?.transformSelection('lowercase'), disabled: () => !hasSel() },
 		uppercase: { label: 'UPPERCASE', run: () => sel()?.transformSelection('uppercase'), disabled: () => !hasSel() },
 		propercase: { label: 'Title Case', run: () => sel()?.transformSelection('propercase'), disabled: () => !hasSel() },
