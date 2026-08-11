@@ -141,6 +141,7 @@
 				border: '1px solid #555',
 			},
 			'.cm-panel.cm-panel-search label': { color: '#d4d4d4' },
+			'.tok-link': { color: '#80DEEA' },
 		};
 		if (themeName === 'light') {
 			return EditorView.theme({
