@@ -4,7 +4,7 @@ A fast, local-first markdown/text editor for macOS, Windows, and Linux. Built wi
 
 ## Why I built this
 
-I am a Web Designer / Developer. I constantly have to Cut and Paste plain text back and forth. I also need to transform text from lowercase UPPERCASE and Title Case frequently as well as do find and replace. I use a lot of editors for various reasons code, etc. but I just wanted a small fast cross platform text editor that handles these key tasks without unnecessary extras.
+I am a Web Designer / Developer. I constantly have to Cut and Paste plain text back and forth. I also need to transform text from lowercase to UPPERCASE and Title Case frequently, as well as do find and replace. I use a lot of editors for various reasons, e.g. code, etc., but I just wanted a small, fast, cross platform text editor that handles these key tasks without unnecessary extras.
 
 ## Features
 
