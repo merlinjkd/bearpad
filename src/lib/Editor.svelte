@@ -42,6 +42,7 @@
 		fontFamily = "'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
 		wordWrap = true,
 		spellcheck = true,
+		spellLang = 'en_US',
 	}: {
 		onReady?: (ref: EditorExposed) => void;
 		doc?: string;
@@ -51,6 +52,7 @@
 		fontFamily?: string;
 		wordWrap?: boolean;
 		spellcheck?: boolean;
+		spellLang?: string;
 	} = $props();
 
 	let container: HTMLDivElement;
@@ -84,6 +86,8 @@
 	// must be provided to the decorations facet or CM never draws the marks
 	const spellDecorations = EditorView.decorations.from(spellField, (d) => d);
 
+	let langRef = $state(spellLang);
+
 	const spellUnderline = EditorView.baseTheme({
 		'.cm-spell-error': { textDecoration: 'underline wavy #e74c3c', textDecorationSkipInk: 'none' },
 	});
@@ -106,7 +110,7 @@
 							const text = update.state.doc.toString();
 							const hits = await invoke<{ start: number; end: number; word: string }[]>(
 								'spell_check',
-								{ text }
+								{ text, lang: langRef }
 							);
 							if (myGen !== gen) return;
 							update.view.dispatch({
@@ -276,6 +280,12 @@
 		view.dispatch({
 			effects: spellcheckCompartment.reconfigure(s ? [spellUnderline, spellField, spellDecorations, spellCheckPlugin()] : []),
 		});
+	});
+
+	$effect(() => {
+		if (!view || langRef === spellLang) return;
+		langRef = spellLang;
+		view.dispatch({ effects: recheckSpell.of(null) });
 	});
 
 	onMount(() => {

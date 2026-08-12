@@ -30,6 +30,7 @@
 	let uiFontSize = $state(16);
 	let wordWrap = $state(true);
 	let spellcheck = $state(true);
+	let spellLang = $state('en_US');
 	let resolvedTheme = $state<'dark' | 'light'>('dark');
 	let editorTheme = $state<'dark' | 'light' | 'github-dark'>('dark');
 
@@ -254,6 +255,7 @@
 			if (s.fontFamily) fontFamily = s.fontFamily;
 			if (s.wordWrap != null) wordWrap = s.wordWrap;
 			if (s.spellcheck != null) spellcheck = s.spellcheck;
+			if (s.spellLang) spellLang = s.spellLang;
 		} catch { /* defaults */ }
 		resolveTheme();
 	}
@@ -261,7 +263,7 @@
 	async function saveSettings() {
 		try {
 			await invoke('write_settings', {
-				json: JSON.stringify({ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck }),
+				json: JSON.stringify({ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck, spellLang }),
 			});
 		} catch (e) {
 			console.error('Failed to save settings:', e);
@@ -563,6 +565,12 @@
 					>×</button>
 			</div>
 		{/each}
+		<button
+			class="tab-new"
+			aria-label="New tab"
+			title="New tab"
+			onclick={() => newFile()}
+			>+</button>
 	</div>
 
 	<div class="editor-wrap">
@@ -580,6 +588,7 @@
 					{fontFamily}
 					{wordWrap}
 					{spellcheck}
+					{spellLang}
 				/>
 			</div>
 		{/each}
@@ -713,6 +722,22 @@
 	.tab.active {
 		background: var(--menu-hover);
 		box-shadow: inset 0 -2px 0 #094771;
+	}
+	.tab-new {
+		align-self: center;
+		margin: 0 6px;
+		padding: 0 8px;
+		border: none;
+		background: transparent;
+		color: var(--menu-text);
+		font-size: 1.1em;
+		line-height: 1;
+		cursor: pointer;
+	}
+	.tab-new:hover {
+		color: #ffffff;
+		background: var(--menu-hover);
+		border-radius: 4px;
 	}
 	.tab-title {
 		white-space: nowrap;

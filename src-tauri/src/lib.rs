@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -7,6 +8,22 @@ use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 const EN_US_AFF: &[u8] = include_bytes!("../dicts/en_US.aff");
 const EN_US_DIC: &[u8] = include_bytes!("../dicts/en_US.dic");
+const EN_CA_AFF: &[u8] = include_bytes!("../dicts/en_CA.aff");
+const EN_CA_DIC: &[u8] = include_bytes!("../dicts/en_CA.dic");
+const EN_GB_AFF: &[u8] = include_bytes!("../dicts/en_GB.aff");
+const EN_GB_DIC: &[u8] = include_bytes!("../dicts/en_GB.dic");
+const FR_CA_AFF: &[u8] = include_bytes!("../dicts/fr_CA.aff");
+const FR_CA_DIC: &[u8] = include_bytes!("../dicts/fr_CA.dic");
+const ES_ES_AFF: &[u8] = include_bytes!("../dicts/es_ES.aff");
+const ES_ES_DIC: &[u8] = include_bytes!("../dicts/es_ES.dic");
+
+const LANGUAGES: [(&str, &[u8], &[u8]); 5] = [
+    ("en_US", EN_US_AFF, EN_US_DIC),
+    ("en_CA", EN_CA_AFF, EN_CA_DIC),
+    ("en_GB", EN_GB_AFF, EN_GB_DIC),
+    ("fr_CA", FR_CA_AFF, FR_CA_DIC),
+    ("es_ES", ES_ES_AFF, ES_ES_DIC),
+];
 
 fn settings_path(app: &tauri::AppHandle) -> PathBuf {
     let dir = app
@@ -160,12 +177,19 @@ fn spell_check_text(text: &str, h: &Hunspell) -> Vec<Misspelling> {
 }
 
 #[tauri::command]
-fn spell_check(text: String, state: tauri::State<'_, Mutex<Option<SpellChecker>>>) -> Vec<Misspelling> {
+fn spell_check(
+    text: String,
+    lang: String,
+    state: tauri::State<'_, Mutex<Option<HashMap<String, SpellChecker>>>>,
+) -> Vec<Misspelling> {
     // ponytail: full-doc recheck on every change, debounced in JS; switch to
     // dirty-range checking if large files lag.
     let Ok(h) = state.lock() else { return Vec::new() };
     match h.as_ref() {
-        Some(h) => spell_check_text(&text, &h.0),
+        Some(map) => match map.get(&lang) {
+            Some(c) => spell_check_text(&text, &c.0),
+            None => spell_check_text(&text, &map["en_US"].0),
+        },
         None => Vec::new(),
     }
 }
@@ -174,7 +198,7 @@ fn spell_check(text: String, state: tauri::State<'_, Mutex<Option<SpellChecker>>
 fn add_to_dictionary(
     word: String,
     app: tauri::AppHandle,
-    state: tauri::State<'_, Mutex<Option<SpellChecker>>>,
+    state: tauri::State<'_, Mutex<Option<HashMap<String, SpellChecker>>>>,
 ) -> Result<(), String> {
     let word = word.trim();
     if word.is_empty() {
@@ -193,8 +217,10 @@ fn add_to_dictionary(
         writeln!(f, "{word}").map_err(|e| e.to_string())?;
     }
     if let Ok(mut h) = state.lock() {
-        if let Some(h) = h.as_mut() {
-            h.0.add(word);
+        if let Some(map) = h.as_mut() {
+            for c in map.values_mut() {
+                c.0.add(&word);
+            }
         }
     }
     Ok(())
@@ -242,20 +268,27 @@ pub fn run() {
             let dir = app.path().app_data_dir()?;
             let dict_dir = dir.join("dicts");
             fs::create_dir_all(&dict_dir)?;
-            fs::write(dict_dir.join("en_US.aff"), EN_US_AFF)?;
-            fs::write(dict_dir.join("en_US.dic"), EN_US_DIC)?;
-            let h = Hunspell::new(
-                dict_dir.join("en_US.aff").to_str().unwrap(),
-                dict_dir.join("en_US.dic").to_str().unwrap(),
-            );
-            // load persisted user-added words
-            let mut checker = SpellChecker(h);
+            let mut checkers = HashMap::new();
+            for (lang, aff, dic) in LANGUAGES {
+                let aff_name = format!("{lang}.aff");
+                let dic_name = format!("{lang}.dic");
+                fs::write(dict_dir.join(&aff_name), aff)?;
+                fs::write(dict_dir.join(&dic_name), dic)?;
+                let h = Hunspell::new(
+                    dict_dir.join(&aff_name).to_str().unwrap(),
+                    dict_dir.join(&dic_name).to_str().unwrap(),
+                );
+                checkers.insert(lang.to_string(), SpellChecker(h));
+            }
+            // load persisted user-added words into every checker
             if let Ok(words) = fs::read_to_string(dir.join("custom_words.txt")) {
-                for w in words.lines() {
-                    checker.0.add(w);
+                for c in checkers.values_mut() {
+                    for w in words.lines() {
+                        c.0.add(w);
+                    }
                 }
             }
-            app.manage(Mutex::new(Some(checker)));
+            app.manage(Mutex::new(Some(checkers)));
             Ok(())
         })
         .on_window_event(|window, event| {

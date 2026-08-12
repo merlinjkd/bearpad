@@ -6,6 +6,7 @@
 		fontFamily: string;
 		wordWrap: boolean;
 		spellcheck: boolean;
+		spellLang?: string;
 	}
 
 	let {
@@ -121,7 +122,7 @@
 			</div>
 
 			<div class="field">
-				<label for="spellcheck-select">Spell Check (English)</label>
+				<label for="spellcheck-select">Spell Check</label>
 				<select
 					id="spellcheck-select"
 					value={settings.spellcheck ? 'on' : 'off'}
@@ -130,6 +131,21 @@
 				>
 					<option value="on">On</option>
 					<option value="off">Off</option>
+				</select>
+			</div>
+
+			<div class="field">
+				<label for="spell-lang-select">Spell Check Language</label>
+				<select
+					id="spell-lang-select"
+					value={settings.spellLang ?? 'en_US'}
+					onchange={(e) => onChange({ spellLang: (e.target as HTMLSelectElement).value })}
+				>
+					<option value="en_US">English (US)</option>
+					<option value="en_CA">English (Canada)</option>
+					<option value="en_GB">English (UK)</option>
+					<option value="fr_CA">French (Canada)</option>
+					<option value="es_ES">Spanish</option>
 				</select>
 			</div>
 		</div>
