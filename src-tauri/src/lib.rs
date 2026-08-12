@@ -306,7 +306,7 @@ pub fn run() {
                 window
                     .dialog()
                     .message("You have unsaved changes. Discard and close?")
-                    .title("Bearpad")
+                    .title("BearPad")
                     .kind(MessageDialogKind::Warning)
                     .buttons(MessageDialogButtons::OkCancel)
                     .show(move |ok| {

@@ -1,4 +1,4 @@
-# Bearpad
+# BearPad
 
 A fast, local-first markdown/text editor for macOS, Windows, and Linux. Built with Tauri 2, Svelte 5, and CodeMirror 6.
 

@@ -139,7 +139,7 @@
 		try {
 			const tab = activeTab();
 			const win = getCurrentWindow();
-			win.setTitle(`Bearpad — ${fileName(tab?.path ?? null)}${tab?.ref?.isDirty() ? ' ●' : ''}`);
+			win.setTitle(`BearPad — ${fileName(tab?.path ?? null)}${tab?.ref?.isDirty() ? ' ●' : ''}`);
 		} catch {
 			/* title is cosmetic; never let it break the mount chain */
 		}
@@ -225,7 +225,7 @@
 		const tab = tabs[idx];
 		if (tab.ref?.isDirty()) {
 			const ok = await showConfirm('Discard unsaved changes?', {
-				title: 'Bearpad',
+				title: 'BearPad',
 				kind: 'warning',
 			});
 			if (!ok) return;

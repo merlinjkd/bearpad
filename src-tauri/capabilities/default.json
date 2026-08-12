@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "Default capabilities for Bearpad",
+  "description": "Default capabilities for BearPad",
   "windows": ["main"],
   "permissions": [
     "core:default",
