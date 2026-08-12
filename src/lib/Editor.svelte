@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { EditorView, keymap, ViewPlugin, Decoration, type DecorationSet, type ViewUpdate } from '@codemirror/view';
-	import { EditorState, Compartment, StateEffect, StateField } from '@codemirror/state';
+	import { EditorState, Compartment, StateEffect, StateField, RangeSetBuilder } from '@codemirror/state';
 	import { defaultKeymap, history, historyKeymap, undo, redo } from '@codemirror/commands';
 	import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-	import { syntaxHighlighting, defaultHighlightStyle, HighlightStyle } from '@codemirror/language';
-	import { tags as t } from '@lezer/highlight';
+	import { syntaxHighlighting, defaultHighlightStyle, syntaxTree } from '@codemirror/language';
 	import { searchKeymap, search, highlightSelectionMatches, openSearchPanel, selectMatches, replaceAll } from '@codemirror/search';
 	import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 	import { writeText, readText } from '@tauri-apps/plugin-clipboard-manager';
@@ -65,13 +64,42 @@
 	const fontFamilyCompartment = new Compartment();
 	const wrapCompartment = new Compartment();
 	const spellcheckCompartment = new Compartment();
-	const linkStyleCompartment = new Compartment();
 
-	// Cyan links in dark themes; defaultHighlightStyle colors tags.url #219
-	// (dark blue) because it's a light-theme style. Registered after
-	// defaultHighlightStyle so this module's classes win CSS precedence.
-	const darkLinkStyle = () =>
-		syntaxHighlighting(HighlightStyle.define([{ tag: t.link, color: '#80DEEA' }]));
+	// ─── link color (dark themes) ─────────────────────────
+	// Bulletproof override: mark every markdown Link node with our own
+	// stable class via a decoration plugin, then color it with theme CSS
+	// (higher specificity than any HighlightStyle rule, no reliance on
+	// module ordering). Works identically on every platform/build.
+	const linkMark = Decoration.mark({ class: 'bp-link' });
+	const linkClassPlugin = ViewPlugin.fromClass(
+		class {
+			decorations: DecorationSet;
+			constructor(view: EditorView) {
+				this.decorations = this.build(view);
+			}
+			update(update: ViewUpdate) {
+				if (update.docChanged || update.viewportChanged) {
+					this.decorations = this.build(update.view);
+				}
+			}
+			build(view: EditorView): DecorationSet {
+				const builder = new RangeSetBuilder<Decoration>();
+				syntaxTree(view.state).iterate({
+					enter: (node) => {
+						if (node.name === 'Link' || node.name === 'URL') {
+							builder.add(node.from, node.to, linkMark);
+						}
+					},
+				});
+				return builder.finish();
+			}
+		},
+		{ decorations: (v) => v.decorations }
+	);
+	const darkLinkOverride = {
+		'.cm-content .bp-link': { color: '#80DEEA !important' },
+		'.cm-content .bp-link *': { color: '#80DEEA !important' },
+	};
 
 	const setSpellErrors = StateEffect.define<{ from: number; to: number }[]>();
 	const recheckSpell = StateEffect.define<null>();
@@ -177,6 +205,7 @@
 				'.cm-focused .cm-selectionBackground': { backgroundColor: 'rgba(31, 111, 235, 0.3)' },
 				'.cm-matchingBracket': { backgroundColor: '#30363d' },
 				...searchPanelDark,
+				...darkLinkOverride,
 			});
 		}
 		return EditorView.theme({
@@ -189,6 +218,7 @@
 			'.cm-focused .cm-selectionBackground': { backgroundColor: '#264f78' },
 			'.cm-matchingBracket': { backgroundColor: '#4b4b4b' },
 			...searchPanelDark,
+			...darkLinkOverride,
 		});
 	}
 
@@ -213,10 +243,7 @@
 				search({ top: true }),
 				highlightSelectionMatches(),
 				markdown({ base: markdownLanguage }),
-				// MUST precede defaultHighlightStyle: style modules mount in
-				// reverse facet order, so the later-registered module's rules
-				// would be overridden by the default style's.
-				linkStyleCompartment.of(theme === 'dark' || theme === 'github-dark' ? darkLinkStyle() : []),
+				linkClassPlugin,
 				syntaxHighlighting(defaultHighlightStyle),
 				autocompletion(),
 				themeCompartment.of(computeTheme(theme)),
@@ -257,14 +284,7 @@
 		const th = theme;
 		if (!view) return;
 		view.dispatch({
-			effects: [
-				themeCompartment.reconfigure(computeTheme(th)),
-				linkStyleCompartment.reconfigure(
-					th === 'dark' || th === 'github-dark'
-						? syntaxHighlighting(HighlightStyle.define([{ tag: t.link, color: '#80DEEA' }]))
-						: []
-				),
-			],
+			effects: [themeCompartment.reconfigure(computeTheme(th))],
 		});
 	});
 
