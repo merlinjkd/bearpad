@@ -172,6 +172,9 @@
 		border-radius: 10px;
 		min-width: 420px;
 		max-width: 500px;
+		max-height: 90vh;
+		display: flex;
+		flex-direction: column;
 		box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 		color: #cccccc;
@@ -208,6 +211,25 @@
 		display: flex;
 		flex-direction: column;
 		gap: 20px;
+		overflow-y: auto;
+		flex: 1;
+		min-height: 0;
+		scrollbar-width: thin;
+		scrollbar-color: #555 #252526;
+	}
+	.body::-webkit-scrollbar {
+		width: 10px;
+	}
+	.body::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	.body::-webkit-scrollbar-thumb {
+		background: #4a4a4a;
+		border-radius: 5px;
+		border: 2px solid #252526;
+	}
+	.body::-webkit-scrollbar-thumb:hover {
+		background: #5f5f5f;
 	}
 	.field {
 		display: flex;
@@ -283,6 +305,7 @@
 		border-top: 1px solid #3c3c3c;
 		display: flex;
 		justify-content: flex-end;
+		flex-shrink: 0;
 	}
 	.action-btn {
 		padding: 6px 20px;
