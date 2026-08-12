@@ -13,7 +13,10 @@
 
 	type Theme = 'dark' | 'light' | 'system' | 'github-dark';
 
-	const FILTERS = [{ name: 'Markdown', extensions: ['md', 'markdown', 'txt'] }];
+	const FILTERS = [
+		{ name: 'Text', extensions: ['txt'] },
+		{ name: 'Markdown', extensions: ['md', 'markdown'] },
+	];
 
 	interface TabState {
 		id: number;
@@ -208,7 +211,7 @@
 	async function saveFileAs() {
 		const tab = activeTab();
 		if (!tab) return;
-		const selected = await showSaveDialog({ filters: FILTERS, defaultPath: 'untitled.md' });
+		const selected = await showSaveDialog({ filters: FILTERS, defaultPath: 'untitled.txt' });
 		if (!selected) return;
 		const path = selected as string;
 		const content = tab.ref?.getContent() ?? '';

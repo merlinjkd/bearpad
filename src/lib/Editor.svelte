@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { EditorView, keymap, ViewPlugin, Decoration, type DecorationSet, type ViewUpdate } from '@codemirror/view';
+	import { EditorView, keymap, ViewPlugin, Decoration, drawSelection, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 	import { EditorState, Compartment, StateEffect, StateField, RangeSetBuilder } from '@codemirror/state';
 	import { defaultKeymap, history, historyKeymap, undo, redo } from '@codemirror/commands';
 	import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
@@ -239,6 +239,7 @@
 			doc,
 			extensions: [
 				history(),
+				drawSelection(),
 				keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, ...completionKeymap]),
 				search({ top: true }),
 				highlightSelectionMatches(),
