@@ -4,7 +4,8 @@
 	import { EditorState, Compartment, StateEffect, StateField } from '@codemirror/state';
 	import { defaultKeymap, history, historyKeymap, undo, redo } from '@codemirror/commands';
 	import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-	import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
+	import { syntaxHighlighting, defaultHighlightStyle, HighlightStyle } from '@codemirror/language';
+	import { tags as t } from '@lezer/highlight';
 	import { searchKeymap, search, highlightSelectionMatches, openSearchPanel, selectMatches, replaceAll } from '@codemirror/search';
 	import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 	import { writeText, readText } from '@tauri-apps/plugin-clipboard-manager';
@@ -64,6 +65,13 @@
 	const fontFamilyCompartment = new Compartment();
 	const wrapCompartment = new Compartment();
 	const spellcheckCompartment = new Compartment();
+	const linkStyleCompartment = new Compartment();
+
+	// Cyan links in dark themes; defaultHighlightStyle colors tags.url #219
+	// (dark blue) because it's a light-theme style. Registered after
+	// defaultHighlightStyle so this module's classes win CSS precedence.
+	const darkLinkStyle = () =>
+		syntaxHighlighting(HighlightStyle.define([{ tag: t.link, color: '#80DEEA' }]));
 
 	const setSpellErrors = StateEffect.define<{ from: number; to: number }[]>();
 	const recheckSpell = StateEffect.define<null>();
@@ -145,7 +153,6 @@
 				border: '1px solid #555',
 			},
 			'.cm-panel.cm-panel-search label': { color: '#d4d4d4' },
-			'.tok-link': { color: '#80DEEA' },
 		};
 		if (themeName === 'light') {
 			return EditorView.theme({
@@ -206,6 +213,10 @@
 				search({ top: true }),
 				highlightSelectionMatches(),
 				markdown({ base: markdownLanguage }),
+				// MUST precede defaultHighlightStyle: style modules mount in
+				// reverse facet order, so the later-registered module's rules
+				// would be overridden by the default style's.
+				linkStyleCompartment.of(theme === 'dark' || theme === 'github-dark' ? darkLinkStyle() : []),
 				syntaxHighlighting(defaultHighlightStyle),
 				autocompletion(),
 				themeCompartment.of(computeTheme(theme)),
@@ -243,10 +254,17 @@
 	}
 
 	$effect(() => {
-		const t = theme;
+		const th = theme;
 		if (!view) return;
 		view.dispatch({
-			effects: themeCompartment.reconfigure(computeTheme(t)),
+			effects: [
+				themeCompartment.reconfigure(computeTheme(th)),
+				linkStyleCompartment.reconfigure(
+					th === 'dark' || th === 'github-dark'
+						? syntaxHighlighting(HighlightStyle.define([{ tag: t.link, color: '#80DEEA' }]))
+						: []
+				),
+			],
 		});
 	});
 
