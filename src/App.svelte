@@ -6,6 +6,9 @@
 	import { invoke } from '@tauri-apps/api/core';
 	import { open, save as showSaveDialog, confirm as showConfirm } from '@tauri-apps/plugin-dialog';
 	import { getCurrentWindow } from '@tauri-apps/api/window';
+	import bearpawIcon from './assets/bearpaw.png';
+
+	const isMac = /mac/i.test(navigator.platform);
 	import { editorCommands } from './lib/commands';
 
 	type Theme = 'dark' | 'light' | 'system' | 'github-dark';
@@ -481,6 +484,23 @@
 </script>
 
 <div class="app-root" data-theme={resolvedTheme} style="--ui-font-size:{uiFontSize}px">
+	<div class="title-bar" class:title-bar-mac={isMac} data-tauri-drag-region>
+		<img class="title-bar-icon" src={bearpawIcon} alt="" draggable="false" />
+		<span class="title-bar-title" data-tauri-drag-region>BearPad</span>
+		{#if !isMac}
+			<div class="title-bar-controls">
+				<button class="tb-btn" aria-label="Minimize" onclick={() => getCurrentWindow().minimize()}>
+					<span class="tb-glyph">─</span>
+				</button>
+				<button class="tb-btn" aria-label="Maximize" onclick={() => getCurrentWindow().toggleMaximize()}>
+					<span class="tb-glyph">□</span>
+				</button>
+				<button class="tb-btn tb-close" aria-label="Close" onclick={() => getCurrentWindow().close()}>
+					<span class="tb-glyph">✕</span>
+				</button>
+			</div>
+		{/if}
+	</div>
 	<div class="menu-bar" role="menubar">
 		{#each menus as menu, i (menu.label)}
 			<div
@@ -643,6 +663,61 @@
 		position: relative;
 		z-index: 1000;
 		flex-shrink: 0;
+	}
+	.title-bar {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		height: 40px;
+		padding: 0 12px;
+		background: var(--menu-bg);
+		border-bottom: 1px solid var(--menu-border);
+		user-select: none;
+		flex-shrink: 0;
+		-webkit-app-region: drag;
+	}
+	.title-bar-mac {
+		padding-left: 78px;
+	}
+	.title-bar-icon {
+		width: 24px;
+		height: 24px;
+		border-radius: 5px;
+	}
+	.title-bar-title {
+		font-size: 16px;
+		font-weight: 600;
+		color: var(--menu-text);
+	}
+	.title-bar-controls {
+		margin-left: auto;
+		display: flex;
+		gap: 2px;
+		-webkit-app-region: no-drag;
+	}
+	.tb-btn {
+		width: 40px;
+		height: 30px;
+		border: none;
+		background: transparent;
+		color: var(--menu-text);
+		font-size: 13px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 4px;
+	}
+	.tb-btn:hover {
+		background: var(--menu-hover);
+	}
+	.tb-close:hover {
+		background: #e81123;
+		color: #ffffff;
+	}
+	.tb-glyph {
+		font-size: 13px;
+		line-height: 1;
 	}
 	.menu-item {
 		position: relative;
