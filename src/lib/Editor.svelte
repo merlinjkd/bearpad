@@ -43,6 +43,7 @@
 		wordWrap = true,
 		spellcheck = true,
 		spellLang = 'en_US',
+		cursorBlink = false,
 	}: {
 		onReady?: (ref: EditorExposed) => void;
 		doc?: string;
@@ -53,6 +54,7 @@
 		wordWrap?: boolean;
 		spellcheck?: boolean;
 		spellLang?: string;
+		cursorBlink?: boolean;
 	} = $props();
 
 	let container: HTMLDivElement;
@@ -64,6 +66,13 @@
 	const fontFamilyCompartment = new Compartment();
 	const wrapCompartment = new Compartment();
 	const spellcheckCompartment = new Compartment();
+	const blinkCompartment = new Compartment();
+
+	// Kill the base-theme blink animation when cursorBlink is off (default).
+	// !important: the base rule and this one tie on specificity, and sheet
+	// order between StyleModule mounts is not reliably later — important wins.
+	const cursorBlinkStyle = (blink: boolean) =>
+		blink ? [] : EditorView.theme({ '&.cm-focused > .cm-scroller > .cm-cursorLayer': { animation: 'none !important' } });
 
 	// ─── link color (dark themes) ─────────────────────────
 	// Bulletproof override: mark every markdown Link node with our own
@@ -188,7 +197,7 @@
 				'.cm-gutters': { backgroundColor: '#f5f5f5', color: '#999999', border: 'none' },
 				'.cm-activeLineGutter': { backgroundColor: '#e8e8e8' },
 				'.cm-activeLine': { backgroundColor: '#f0f0f044' },
-				'.cm-cursor': { borderLeft: '2px solid #333333' },
+				'.cm-cursor': { borderLeft: '2px solid #323232' },
 				'.cm-selectionBackground': { backgroundColor: '#add6ff' },
 				'.cm-focused .cm-selectionBackground': { backgroundColor: '#add6ff' },
 				'.cm-matchingBracket': { backgroundColor: '#d4d4d4' },
@@ -200,7 +209,7 @@
 				'.cm-gutters': { backgroundColor: '#0d1117', color: '#6e7681', border: 'none' },
 				'.cm-activeLineGutter': { backgroundColor: '#161b22' },
 				'.cm-activeLine': { backgroundColor: '#161b22' },
-				'.cm-cursor': { borderLeft: '2px solid #58a6ff' },
+				'.cm-cursor': { borderLeft: '2px solid #fafafa' },
 				'.cm-selectionBackground': { backgroundColor: 'rgba(31, 111, 235, 0.3)' },
 				'.cm-focused .cm-selectionBackground': { backgroundColor: 'rgba(31, 111, 235, 0.3)' },
 				'.cm-matchingBracket': { backgroundColor: '#30363d' },
@@ -213,7 +222,7 @@
 			'.cm-gutters': { backgroundColor: '#252526', color: '#858585', border: 'none' },
 			'.cm-activeLineGutter': { backgroundColor: '#2a2d2e' },
 			'.cm-activeLine': { backgroundColor: '#2a2d2e44' },
-			'.cm-cursor': { borderLeft: '2px solid #aeafad' },
+			'.cm-cursor': { borderLeft: '2px solid #fafafa' },
 			'.cm-selectionBackground': { backgroundColor: '#264f78' },
 			'.cm-focused .cm-selectionBackground': { backgroundColor: '#264f78' },
 			'.cm-matchingBracket': { backgroundColor: '#4b4b4b' },
@@ -246,6 +255,7 @@
 				markdown({ base: markdownLanguage }),
 				linkClassPlugin,
 				syntaxHighlighting(defaultHighlightStyle),
+				blinkCompartment.of(cursorBlinkStyle(cursorBlink)),
 				autocompletion(),
 				themeCompartment.of(computeTheme(theme)),
 				fontSizeCompartment.of(computeFontSize(fontSize)),
@@ -325,6 +335,14 @@
 		if (!view || langRef === spellLang) return;
 		langRef = spellLang;
 		view.dispatch({ effects: recheckSpell.of(null) });
+	});
+
+	$effect(() => {
+		const b = cursorBlink;
+		if (!view) return;
+		view.dispatch({
+			effects: blinkCompartment.reconfigure(cursorBlinkStyle(b)),
+		});
 	});
 
 	onMount(() => {

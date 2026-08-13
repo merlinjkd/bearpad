@@ -37,6 +37,7 @@
 	let wordWrap = $state(true);
 	let spellcheck = $state(true);
 	let spellLang = $state('en_US');
+	let cursorBlink = $state(false);
 	let resolvedTheme = $state<'dark' | 'light'>('dark');
 	let editorTheme = $state<'dark' | 'light' | 'github-dark'>('dark');
 
@@ -262,6 +263,7 @@
 			if (s.wordWrap != null) wordWrap = s.wordWrap;
 			if (s.spellcheck != null) spellcheck = s.spellcheck;
 			if (s.spellLang) spellLang = s.spellLang;
+			if (s.cursorBlink != null) cursorBlink = s.cursorBlink;
 		} catch { /* defaults */ }
 		resolveTheme();
 	}
@@ -269,7 +271,7 @@
 	async function saveSettings() {
 		try {
 			await invoke('write_settings', {
-				json: JSON.stringify({ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck, spellLang }),
+				json: JSON.stringify({ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck, spellLang, cursorBlink }),
 			});
 		} catch (e) {
 			console.error('Failed to save settings:', e);
@@ -612,6 +614,7 @@
 					{wordWrap}
 					{spellcheck}
 					{spellLang}
+					{cursorBlink}
 				/>
 			</div>
 		{/each}
@@ -623,7 +626,7 @@
 
 	{#if showSettings}
 		<SettingsModal
-			settings={{ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck }}
+			settings={{ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck, spellLang, cursorBlink }}
 			onChange={handleSettingsChange}
 			onClose={closeSettings}
 		/>

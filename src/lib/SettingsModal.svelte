@@ -7,6 +7,7 @@
 		wordWrap: boolean;
 		spellcheck: boolean;
 		spellLang?: string;
+		cursorBlink?: boolean;
 	}
 
 	let {
@@ -146,6 +147,18 @@
 					<option value="en_GB">English (UK)</option>
 					<option value="fr_CA">French (Canada)</option>
 					<option value="es_ES">Spanish</option>
+				</select>
+			</div>
+
+			<div class="field">
+				<label for="cursor-blink-select">Blinking Cursor</label>
+				<select
+					id="cursor-blink-select"
+					value={settings.cursorBlink ? 'on' : 'off'}
+					onchange={(e) => onChange({ cursorBlink: (e.target as HTMLSelectElement).value === 'on' })}
+				>
+					<option value="off">Off</option>
+					<option value="on">On</option>
 				</select>
 			</div>
 		</div>
