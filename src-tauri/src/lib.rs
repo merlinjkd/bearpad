@@ -359,6 +359,7 @@ pub fn run() {
             write_settings,
             set_dirty,
             spell_check,
+            suggest_spellings,
             add_to_dictionary,
         ])
         .run(tauri::generate_context!())
