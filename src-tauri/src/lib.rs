@@ -195,6 +195,22 @@ fn spell_check(
 }
 
 #[tauri::command]
+fn suggest_spellings(
+    word: String,
+    lang: String,
+    state: tauri::State<'_, Mutex<Option<HashMap<String, SpellChecker>>>>,
+) -> Vec<String> {
+    let Ok(h) = state.lock() else { return Vec::new() };
+    match h.as_ref() {
+        Some(map) => match map.get(&lang) {
+            Some(c) => c.0.suggest(&word),
+            None => map["en_US"].0.suggest(&word),
+        },
+        None => Vec::new(),
+    }
+}
+
+#[tauri::command]
 fn add_to_dictionary(
     word: String,
     app: tauri::AppHandle,
@@ -255,6 +271,26 @@ mod tests {
         let mut h = h;
         h.add("zzqqxxyy");
         assert!(h.check("zzqqxxyy") == CheckResult::FoundInDictionary);
+    }
+
+    #[test]
+    fn suggest_returns_corrections() {
+        let dir = std::env::temp_dir().join("bearpad-spellcheck-test");
+        fs::create_dir_all(&dir).unwrap();
+        let aff = dir.join("en_US.aff");
+        let dic = dir.join("en_US.dic");
+        fs::write(&aff, EN_US_AFF).unwrap();
+        fs::write(&dic, EN_US_DIC).unwrap();
+        let h = Hunspell::new(aff.to_str().unwrap(), dic.to_str().unwrap());
+
+        let suggestions = h.suggest("mispeling");
+        assert!(!suggestions.is_empty(), "expected suggestions, got: {suggestions:?}");
+        assert!(
+            suggestions.iter().any(|s| s == "misspelling" || s == "misspelling" && s.to_lowercase() == "misspelling" || s.to_lowercase() == "misspellings"),
+            "expected a plausible correction in {suggestions:?}"
+        );
+        // unknown garbage yields no suggestions
+        assert!(h.suggest("zzqqxxyy").is_empty());
     }
 }
 

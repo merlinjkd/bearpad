@@ -31,6 +31,8 @@
 		isDirty: () => boolean;
 		getContent: () => string;
 		recheckSpelling: () => void;
+		getMisspellingAt: (x: number, y: number) => { from: number; to: number; text: string } | null;
+		replaceRange: (from: number, to: number, text: string) => void;
 	}
 
 	let {
@@ -136,6 +138,9 @@
 	const spellUnderline = EditorView.baseTheme({
 		'.cm-spell-error': { textDecoration: 'underline wavy #e74c3c', textDecorationSkipInk: 'none' },
 	});
+	// squiggle matches the theme's link color (light: default link #219;
+	// dark modes: #80DEEA), overriding the base red.
+	const spellSquiggle = (color: string) => ({ '.cm-spell-error': { textDecorationColor: color } });
 
 	function spellCheckPlugin() {
 		let timer: number | undefined;
@@ -201,7 +206,8 @@
 				'.cm-selectionBackground': { backgroundColor: '#add6ff' },
 				'.cm-focused .cm-selectionBackground': { backgroundColor: '#add6ff' },
 				'.cm-matchingBracket': { backgroundColor: '#d4d4d4' },
-			});
+				...spellSquiggle('#219'),
+				});
 		}
 		if (themeName === 'github-dark') {
 			return EditorView.theme({
@@ -215,6 +221,7 @@
 				'.cm-matchingBracket': { backgroundColor: '#30363d' },
 				...searchPanelDark,
 				...darkLinkOverride,
+				...spellSquiggle('#80DEEA'),
 			});
 		}
 		return EditorView.theme({
@@ -228,6 +235,7 @@
 			'.cm-matchingBracket': { backgroundColor: '#4b4b4b' },
 			...searchPanelDark,
 			...darkLinkOverride,
+			...spellSquiggle('#80DEEA'),
 		});
 	}
 
@@ -439,6 +447,24 @@
 
 				recheckSpelling: () => {
 					view.dispatch({ effects: recheckSpell.of(null) });
+				},
+
+				getMisspellingAt: (x, y) => {
+					const pos = view.posAtCoords({ x, y });
+					if (pos == null) return null;
+					const set = view.state.field(spellField, false);
+					if (!set) return null;
+					let res: { from: number; to: number; text: string } | null = null;
+					set.between(pos - 1, pos + 1, (from, to) => {
+						if (!res && from <= pos && pos < to) {
+							res = { from, to, text: view.state.sliceDoc(from, to) };
+						}
+					});
+					return res;
+				},
+
+				replaceRange: (from, to, text) => {
+					view.dispatch({ changes: { from, to, insert: text } });
 				},
 				});
 		}

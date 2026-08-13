@@ -338,7 +338,7 @@
 
 	// ─── context menu handler ───────────────────────────
 
-	function onContextMenu(e: MouseEvent) {
+	async function onContextMenu(e: MouseEvent) {
 		e.preventDefault();
 		const isInsideEditor = !!(e.target as HTMLElement).closest('.cm-editor');
 		const hasSelection = activeTab()?.ref?.hasSelection() || false;
@@ -385,13 +385,37 @@
 				{ separator: true },
 			);
 
-			// right-clicking a misspelled word offers to learn it
+			// right-clicking a misspelled word offers corrections + learn
 			const errWord = (e.target as HTMLElement)
 				.closest('.cm-spell-error')
 				?.textContent?.trim();
 			if (errWord) {
+				const miss = activeTab()?.ref?.getMisspellingAt(e.clientX, e.clientY);
+				items.push({ separator: true });
+				if (miss) {
+					try {
+						const suggestions = await invoke<string[]>(
+							'suggest_spellings',
+							{ word: miss.text, lang: spellLang }
+						);
+						if (suggestions.length) {
+							items.push({ label: 'Suggestions', disabled: true });
+							for (const s of suggestions.slice(0, 8)) {
+								items.push({
+									label: s,
+									onClick: () => {
+										activeTab()?.ref?.replaceRange(miss.from, miss.to, s);
+										hideMenu();
+									},
+								});
+							}
+							items.push({ separator: true });
+						}
+					} catch {
+						/* not in Tauri (dev browser) */
+					}
+				}
 				items.push(
-					{ separator: true },
 					{
 						label: `Add "${errWord}" to dictionary`,
 						onClick: async () => {
@@ -429,7 +453,7 @@
 
 	onMount(() => {
 		// Context menu listener
-		document.addEventListener('contextmenu', onContextMenu as EventListener);
+		document.addEventListener('contextmenu', onContextMenu as unknown as EventListener);
 
 		// View shortcuts handled in-page: Windows WebView2 swallows OS menu
 		// accelerators when the webview has focus (and hijacks Ctrl+= as browser
