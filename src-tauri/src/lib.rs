@@ -34,6 +34,13 @@ fn settings_path(app: &tauri::AppHandle) -> PathBuf {
     dir.join("settings.json")
 }
 
+fn recovery_path(app: &tauri::AppHandle) -> PathBuf {
+    app.path()
+        .app_data_dir()
+        .expect("failed to resolve app data dir")
+        .join("recovery.json")
+}
+
 #[tauri::command]
 fn set_dirty(dirty: bool, state: tauri::State<'_, Mutex<bool>>) {
     *state.lock().unwrap() = dirty;
@@ -62,7 +69,27 @@ fn read_settings(app: tauri::AppHandle) -> Result<String, String> {
 #[tauri::command]
 fn write_settings(app: tauri::AppHandle, json: String) -> Result<(), String> {
     let path = settings_path(&app);
-    fs::write(&path, &json).map_err(|e| format!("Failed to write settings: {}", e))
+    fs::write(&path, &json).map_err(|e| format!("Failed to write settings: {e}"))
+}
+
+// Recovery store for unsaved/untitled tabs. read takes the file (restore-once,
+// i.e. after a crash); write persists current untitled tabs for autosave.
+#[tauri::command]
+fn read_recovery(app: tauri::AppHandle) -> Result<String, String> {
+    let path = recovery_path(&app);
+    let data = if path.exists() {
+        fs::read_to_string(&path).unwrap_or_default()
+    } else {
+        String::new()
+    };
+    let _ = fs::remove_file(&path);
+    Ok(data)
+}
+
+#[tauri::command]
+fn write_recovery(app: tauri::AppHandle, json: String) -> Result<(), String> {
+    let path = recovery_path(&app);
+    fs::write(&path, &json).map_err(|e| format!("Failed to write recovery: {e}"))
 }
 
 #[derive(serde::Serialize)]
@@ -192,6 +219,11 @@ fn spell_check(
         },
         None => Vec::new(),
     }
+}
+
+#[tauri::command]
+fn app_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
 }
 
 #[tauri::command]
@@ -334,6 +366,8 @@ pub fn run() {
             // real on confirm. Dirty state is synced from the webview via set_dirty.
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 let dirty = *window.state::<Mutex<bool>>().lock().unwrap();
+                // clean close or confirmed discard: forget any crash recovery
+                let _ = fs::remove_file(recovery_path(&window.app_handle()));
                 if !dirty {
                     return; // clean document: default close proceeds
                 }
@@ -357,9 +391,12 @@ pub fn run() {
             write_file,
             read_settings,
             write_settings,
+            read_recovery,
+            write_recovery,
             set_dirty,
             spell_check,
             suggest_spellings,
+            app_version,
             add_to_dictionary,
         ])
         .run(tauri::generate_context!())

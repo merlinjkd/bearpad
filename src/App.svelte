@@ -23,13 +23,18 @@
 		path: string | null;
 		doc: string;
 		ref: EditorExposed | null;
+		name?: string;
+		lastChange?: number;
 	}
 
-	let tabs = $state<TabState[]>([{ id: 0, path: null, doc: '', ref: null }]);
+	let tabs = $state<TabState[]>([{ id: 0, path: null, doc: '', ref: null, name: 'Untitled 1' }]);
 	let activeTabId = $state(0);
 	let tabSeq = 1;
+	let untitledSeq = 2;
 	let dirtyMap = $state<Record<number, boolean>>({});
 	let showSettings = $state(false);
+	let showAbout = $state(false);
+	let appVersion = $state('');
 	let theme = $state<Theme>('dark');
 	let fontSize = $state(18);
 	let fontFamily = $state("'SF Mono', 'Fira Code', 'Cascadia Code', monospace");
@@ -74,6 +79,8 @@
 				{ label: 'New', action: () => newFile() },
 				{ label: 'Open...', action: () => openFile() },
 				{ label: 'Settings...', action: () => openSettings() },
+				{ separator: true },
+				{ label: 'About BearPad...', action: () => openAbout() },
 				{ separator: true },
 				{ label: 'Save', action: () => saveFile() },
 				{ label: 'Save As...', action: () => saveFileAs() },
@@ -133,9 +140,9 @@
 
 	// ─── helpers ────────────────────────────────────────
 
-	function fileName(path: string | null) {
-		if (!path) return 'Untitled';
-		return path.split('/').pop() || path.split('\\').pop() || 'Untitled';
+	function fileName(tab: TabState | null) {
+		if (!tab?.path) return tab?.name ?? 'Untitled';
+		return tab.path.split('/').pop() || tab.path.split('\\').pop() || 'Untitled';
 	}
 
 	function activeTab() {
@@ -146,7 +153,7 @@
 		try {
 			const tab = activeTab();
 			const win = getCurrentWindow();
-			win.setTitle(`BearPad — ${fileName(tab?.path ?? null)}${tab?.ref?.isDirty() ? ' ●' : ''}`);
+			win.setTitle(`BearPad — ${fileName(tab)}${tab?.ref?.isDirty() ? ' ●' : ''}`);
 		} catch {
 			/* title is cosmetic; never let it break the mount chain */
 		}
@@ -158,14 +165,79 @@
 
 	function handleDirtyChange(tabId: number, dirty: boolean) {
 		dirtyMap[tabId] = dirty;
+		const tab = tabs.find((t) => t.id === tabId);
+		if (tab && dirty) tab.lastChange = Date.now();
 		syncRustDirty();
 		updateTitle();
 	}
 
+	// ─── autosave + crash recovery ──────────────────────
+
+	// Persist untitled tabs (content or dirty) so a crash can restore them.
+	async function updateRecovery() {
+		const untitled = tabs.filter(
+			(t) => !t.path && (dirtyMap[t.id] || (t.ref?.getContent() ?? '').length > 0)
+		);
+		const payload = JSON.stringify({
+			untitledSeq,
+			tabs: untitled.map((t) => ({ name: t.name, content: t.ref?.getContent() ?? '' })),
+		});
+		try {
+			await invoke('write_recovery', { json: payload });
+		} catch {
+			/* not in Tauri (dev browser) */
+		}
+	}
+
+	async function restoreRecovery() {
+		try {
+			const data = await invoke<string>('read_recovery');
+			if (!data) return;
+			const rec = JSON.parse(data);
+			if (Array.isArray(rec.tabs) && rec.tabs.length) {
+				for (const r of rec.tabs) {
+					const tab: TabState = {
+						id: tabSeq++,
+						path: null,
+						doc: r.content ?? '',
+						ref: null,
+						name: r.name ?? `Untitled ${untitledSeq}`,
+					};
+					tabs.push(tab);
+				}
+				activeTabId = tabs[0]?.id ?? null;
+				untitledSeq = Math.max(untitledSeq, (rec.untitledSeq ?? 1) + tabs.length);
+				updateTitle();
+			}
+		} catch {
+			/* corrupt recovery: ignore */
+		}
+	}
+
+	// Autosave: files with a path are written after 120s of idle changes;
+	// untitled tabs go to the recovery store on the same cadence.
+	setInterval(() => {
+		const now = Date.now();
+		for (const tab of tabs) {
+			if (!tab.ref?.isDirty()) continue;
+			if (!tab.lastChange || now - tab.lastChange < 120_000) continue;
+			const content = tab.ref.getContent();
+			if (tab.path) {
+				invoke('write_file', { path: tab.path, content })
+					.then(() => {
+						tab.ref?.markSaved();
+						updateTitle();
+					})
+					.catch(() => {});
+			}
+		}
+		updateRecovery();
+	}, 30_000);
+
 	// ─── file operations ─────────────────────────────────
 
 	async function newFile() {
-		const tab: TabState = { id: tabSeq++, path: null, doc: '', ref: null };
+		const tab: TabState = { id: tabSeq++, path: null, doc: '', ref: null, name: `Untitled ${untitledSeq++}` };
 		tabs.push(tab);
 		activeTabId = tab.id;
 		updateTitle();
@@ -221,6 +293,7 @@
 			tab.path = path;
 			tab.ref?.markSaved();
 			updateTitle();
+			updateRecovery();
 		} catch (e) {
 			console.error('Failed to save file:', e);
 		}
@@ -239,6 +312,7 @@
 		}
 		tabs.splice(idx, 1);
 		delete dirtyMap[id];
+		updateRecovery();
 		if (activeTabId === id) {
 			activeTabId = tabs[Math.min(idx, tabs.length - 1)]?.id ?? null;
 		}
@@ -313,6 +387,21 @@
 
 	function openSettings() {
 		showSettings = true;
+	}
+
+	async function openAbout() {
+		if (!appVersion) {
+			try {
+				appVersion = await invoke<string>('app_version');
+			} catch {
+				appVersion = 'unknown';
+			}
+		}
+		showAbout = true;
+	}
+
+	function closeAbout() {
+		showAbout = false;
 	}
 
 	function closeSettings() {
@@ -452,6 +541,7 @@
 	}
 
 	onMount(() => {
+		restoreRecovery();
 		// Context menu listener
 		document.addEventListener('contextmenu', onContextMenu as unknown as EventListener);
 
@@ -600,7 +690,7 @@
 					}
 				}}
 			>
-				<span class="tab-title">{fileName(tab.path)}</span>
+				<span class="tab-title">{fileName(tab)}</span>
 				{#if dirtyMap[tab.id]}
 					<span class="tab-dirty" title="unsaved">●</span>
 				{/if}
@@ -654,6 +744,29 @@
 			onChange={handleSettingsChange}
 			onClose={closeSettings}
 		/>
+	{/if}
+
+	{#if showAbout}
+		<div class="about-overlay" onclick={closeAbout} role="presentation">
+			<div
+				class="about-sheet"
+				onclick={(e) => e.stopPropagation()}
+				onkeydown={(e) => {
+					if (e.key === 'Escape') closeAbout();
+				}}
+				role="dialog"
+				aria-label="About BearPad"
+				tabindex="-1"
+			>
+				<img class="about-icon" src={bearpawIcon} alt="" draggable="false" />
+				<h2 class="about-name">BearPad</h2>
+				<p class="about-version">Version {appVersion}</p>
+				<p class="about-desc">
+					A fast, local-first text editor for macOS, Windows, and Linux.
+				</p>
+				<button class="about-ok" onclick={closeAbout}>OK</button>
+			</div>
+		</div>
 	{/if}
 </div>
 
@@ -748,6 +861,64 @@
 	.tb-glyph {
 		font-size: 13px;
 		line-height: 1;
+	}
+	.about-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 9999;
+		background: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.about-sheet {
+		background: var(--menu-bg);
+		border: 1px solid var(--menu-border);
+		border-radius: 10px;
+		padding: 24px 32px;
+		width: 340px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 8px;
+		box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+	}
+	.about-icon {
+		width: 72px;
+		height: 72px;
+		border-radius: 16px;
+		margin-bottom: 6px;
+	}
+	.about-name {
+		margin: 0;
+		font-size: 18px;
+		font-weight: 600;
+		color: var(--menu-text);
+	}
+	.about-version {
+		margin: 0;
+		font-size: 14px;
+		color: #888;
+	}
+	.about-desc {
+		margin: 4px 0 12px;
+		font-size: 13px;
+		color: #999;
+		text-align: center;
+		line-height: 1.4;
+	}
+	.about-ok {
+		padding: 6px 28px;
+		border: none;
+		border-radius: 6px;
+		background: #094771;
+		color: #ffffff;
+		font-size: 14px;
+		cursor: pointer;
+	}
+	.about-ok:hover {
+		background: #0a5a8f;
 	}
 	.menu-item {
 		position: relative;
@@ -850,7 +1021,7 @@
 		text-overflow: ellipsis;
 	}
 	.tab-dirty {
-		color: #e74c3c;
+		color: #d4d4d4;
 		font-size: 0.625em;
 	}
 	.tab-close {
@@ -882,6 +1053,9 @@
 	}
 	:global(.cm-editor) {
 		height: 100%;
+	}
+	.app-root[data-theme="light"] .tab-dirty {
+		color: #555555;
 	}
 	.app-root[data-theme="light"] .menu-bar {
 		background: #f3f3f3;
