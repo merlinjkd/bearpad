@@ -74,8 +74,17 @@
 	const textColorCompartment = new Compartment();
 
 	// Empty string = theme default; otherwise override the editor text color.
+	// !important beats the per-token highlight colors (defaultHighlightStyle
+	// paints .cm-content spans with syntax colors via hashed classes).
 	const textColorStyle = (c: string) =>
-		c ? EditorView.theme({ '& .cm-content': { color: c } }) : [];
+		c
+			? EditorView.theme({
+					'& .cm-content': { color: `${c} !important` },
+					// cover plain text and non-link tokens but keep links + errors on theme colors
+					'& .cm-content span:not(.bp-link):not(.bp-link *)': { color: `${c} !important` },
+					'& .cm-content .cm-spell-error': { color: '#80DEEA !important' },
+				})
+			: [];
 
 	// Kill the base-theme blink animation when cursorBlink is off (default).
 	// !important: the base rule and this one tie on specificity, and sheet
