@@ -46,6 +46,7 @@
 		spellcheck = true,
 		spellLang = 'en_US',
 		cursorBlink = false,
+		textColor = '',
 	}: {
 		onReady?: (ref: EditorExposed) => void;
 		doc?: string;
@@ -57,6 +58,7 @@
 		spellcheck?: boolean;
 		spellLang?: string;
 		cursorBlink?: boolean;
+		textColor?: string;
 	} = $props();
 
 	let container: HTMLDivElement;
@@ -69,6 +71,11 @@
 	const wrapCompartment = new Compartment();
 	const spellcheckCompartment = new Compartment();
 	const blinkCompartment = new Compartment();
+	const textColorCompartment = new Compartment();
+
+	// Empty string = theme default; otherwise override the editor text color.
+	const textColorStyle = (c: string) =>
+		c ? EditorView.theme({ '& .cm-content': { color: c } }) : [];
 
 	// Kill the base-theme blink animation when cursorBlink is off (default).
 	// !important: the base rule and this one tie on specificity, and sheet
@@ -180,6 +187,11 @@
 
 	function computeTheme(themeName: string) {
 		const searchPanelDark = {
+			// the wrapper carries the light base-theme bg; must paint it too
+			'.cm-panels': {
+				backgroundColor: '#252526',
+				color: '#d4d4d4',
+			},
 			'.cm-panel.cm-panel-search': {
 				backgroundColor: '#252526',
 				color: '#d4d4d4',
@@ -208,21 +220,6 @@
 				'.cm-matchingBracket': { backgroundColor: '#d4d4d4' },
 				...spellSquiggle('#219'),
 				});
-		}
-		if (themeName === 'github-dark') {
-			return EditorView.theme({
-				'&': { backgroundColor: '#0d1117', color: '#c9d1d9', height: '100%' },
-				'.cm-gutters': { backgroundColor: '#0d1117', color: '#6e7681', border: 'none' },
-				'.cm-activeLineGutter': { backgroundColor: '#161b22' },
-				'.cm-activeLine': { backgroundColor: '#161b22' },
-				'.cm-cursor': { borderLeft: '2px solid #fafafa' },
-				'.cm-selectionBackground': { backgroundColor: 'rgba(31, 111, 235, 0.3)' },
-				'.cm-focused .cm-selectionBackground': { backgroundColor: 'rgba(31, 111, 235, 0.3)' },
-				'.cm-matchingBracket': { backgroundColor: '#30363d' },
-				...searchPanelDark,
-				...darkLinkOverride,
-				...spellSquiggle('#80DEEA'),
-			});
 		}
 		return EditorView.theme({
 			'&': { backgroundColor: '#1e1e1e', color: '#d4d4d4', height: '100%' },
@@ -264,6 +261,7 @@
 				linkClassPlugin,
 				syntaxHighlighting(defaultHighlightStyle),
 				blinkCompartment.of(cursorBlinkStyle(cursorBlink)),
+				textColorCompartment.of(textColorStyle(textColor)),
 				autocompletion(),
 				themeCompartment.of(computeTheme(theme)),
 				fontSizeCompartment.of(computeFontSize(fontSize)),
@@ -343,6 +341,14 @@
 		if (!view || langRef === spellLang) return;
 		langRef = spellLang;
 		view.dispatch({ effects: recheckSpell.of(null) });
+	});
+
+	$effect(() => {
+		const c = textColor;
+		if (!view) return;
+		view.dispatch({
+			effects: textColorCompartment.reconfigure(textColorStyle(c)),
+		});
 	});
 
 	$effect(() => {

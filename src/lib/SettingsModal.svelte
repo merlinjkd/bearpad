@@ -1,6 +1,6 @@
 <script lang="ts">
 	interface SettingsData {
-		theme: 'dark' | 'light' | 'system' | 'github-dark';
+		theme: 'dark' | 'light' | 'system';
 		fontSize: number;
 		uiFontSize: number;
 		fontFamily: string;
@@ -8,6 +8,7 @@
 		spellcheck: boolean;
 		spellLang?: string;
 		cursorBlink?: boolean;
+		textColor?: string;
 	}
 
 	let {
@@ -56,11 +57,6 @@
 						class:active={settings.theme === 'system'}
 						onclick={() => onChange({ theme: 'system' })}
 					>System</button>
-					<button
-						class="radio-btn"
-						class:active={settings.theme === 'github-dark'}
-						onclick={() => onChange({ theme: 'github-dark' })}
-					>GitHub Dark</button>
 				</div>
 			</div>
 
@@ -160,6 +156,19 @@
 					<option value="off">Off</option>
 					<option value="on">On</option>
 				</select>
+			</div>
+
+			<div class="field">
+				<label for="text-color-input">Text Color (blank = theme default)</label>
+				<div class="color-row">
+					<input
+						id="text-color-input"
+						type="color"
+						value={settings.textColor || '#d4d4d4'}
+						onchange={(e) => onChange({ textColor: (e.target as HTMLInputElement).value })}
+					/>
+					<button class="color-reset" onclick={() => onChange({ textColor: '' })}>Reset</button>
+				</div>
 			</div>
 		</div>
 
@@ -280,10 +289,36 @@
 		color: #ffffff;
 	}
 	.size-controls {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-	}
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+		.color-row {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+		.color-row input[type='color'] {
+			width: 44px;
+			height: 28px;
+			padding: 2px;
+			border: 1px solid #3c3c3c;
+			border-radius: 6px;
+			background: #2d2d2d;
+			cursor: pointer;
+		}
+		.color-reset {
+			padding: 4px 12px;
+			border: 1px solid #3c3c3c;
+			border-radius: 6px;
+			background: #2d2d2d;
+			color: #cccccc;
+			font-size: 0.8125em;
+			cursor: pointer;
+		}
+		.color-reset:hover {
+			background: #3c3c3c;
+		}
 	.size-btn {
 		width: 32px;
 		height: 32px;

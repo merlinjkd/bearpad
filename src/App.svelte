@@ -11,7 +11,7 @@
 	const isMac = /mac/i.test(navigator.platform);
 	import { editorCommands } from './lib/commands';
 
-	type Theme = 'dark' | 'light' | 'system' | 'github-dark';
+	type Theme = 'dark' | 'light' | 'system';
 
 	const FILTERS = [
 		{ name: 'Text', extensions: ['txt'] },
@@ -43,8 +43,9 @@
 	let spellcheck = $state(true);
 	let spellLang = $state('en_US');
 	let cursorBlink = $state(false);
+	let textColor = $state('');
 	let resolvedTheme = $state<'dark' | 'light'>('dark');
-	let editorTheme = $state<'dark' | 'light' | 'github-dark'>('dark');
+	let editorTheme = $state<'dark' | 'light'>('dark');
 
 	let ctxMenu = $state<{ show: boolean; x: number; y: number; items: any[] }>({
 		show: false,
@@ -338,6 +339,7 @@
 			if (s.spellcheck != null) spellcheck = s.spellcheck;
 			if (s.spellLang) spellLang = s.spellLang;
 			if (s.cursorBlink != null) cursorBlink = s.cursorBlink;
+			if (s.textColor) textColor = s.textColor;
 		} catch { /* defaults */ }
 		resolveTheme();
 	}
@@ -345,7 +347,7 @@
 	async function saveSettings() {
 		try {
 			await invoke('write_settings', {
-				json: JSON.stringify({ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck, spellLang, cursorBlink }),
+				json: JSON.stringify({ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck, spellLang, cursorBlink, textColor }),
 			});
 		} catch (e) {
 			console.error('Failed to save settings:', e);
@@ -361,9 +363,6 @@
 				? 'dark'
 				: 'light';
 			editorTheme = resolvedTheme;
-		} else if (theme === 'github-dark') {
-			resolvedTheme = 'dark';
-			editorTheme = 'github-dark';
 		} else {
 			resolvedTheme = 'dark';
 			editorTheme = 'dark';
@@ -668,6 +667,18 @@
 				{/if}
 			</div>
 		{/each}
+		<div class="menu-spacer"></div>
+		<button
+			class="menu-gear"
+			aria-label="Settings"
+			title="Settings"
+			onclick={() => openSettings()}
+		>
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<circle cx="12" cy="12" r="3"></circle>
+				<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+			</svg>
+		</button>
 	</div>
 
 	<div class="tab-bar" role="tablist">
@@ -729,6 +740,7 @@
 					{spellcheck}
 					{spellLang}
 					{cursorBlink}
+					{textColor}
 				/>
 			</div>
 		{/each}
@@ -919,6 +931,25 @@
 	}
 	.about-ok:hover {
 		background: #0a5a8f;
+	}
+	.menu-spacer {
+		flex: 1;
+	}
+	.menu-gear {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 30px;
+		height: 28px;
+		margin-right: 4px;
+		border: none;
+		border-radius: 6px;
+		background: transparent;
+		color: var(--menu-text);
+		cursor: pointer;
+	}
+	.menu-gear:hover {
+		background: var(--menu-hover);
 	}
 	.menu-item {
 		position: relative;
