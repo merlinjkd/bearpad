@@ -216,6 +216,18 @@
 				border: '1px solid #888',
 			},
 			'.cm-panel.cm-search label': { color: '#d4d4d4' },
+			// the close X sits above the panel; give it a visible glyph + hover
+			'.cm-panel.cm-search [name=close]': {
+				backgroundColor: 'transparent',
+				color: '#d4d4d4',
+				fontSize: '14px',
+				padding: '2px 6px',
+				cursor: 'pointer',
+			},
+			'.cm-panel.cm-search [name=close]:hover': {
+				color: '#ffffff',
+				backgroundColor: '#3a3a3a',
+			},
 		};
 		if (themeName === 'light') {
 			return EditorView.theme({

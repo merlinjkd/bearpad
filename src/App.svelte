@@ -489,7 +489,7 @@
 						);
 						if (suggestions.length) {
 							items.push({ label: 'Suggestions', disabled: true });
-							for (const s of suggestions.slice(0, 8)) {
+							for (const s of suggestions.slice(0, 5)) {
 								items.push({
 									label: s,
 									onClick: () => {
@@ -775,7 +775,7 @@
 				<h2 class="about-name">BearPad</h2>
 				<p class="about-version">Version {appVersion}</p>
 				<p class="about-desc">
-					A fast, local-first text editor for macOS, Windows, and Linux.
+					A small fast cross platform text and markdown editor. It features Scalable Fonts and UI, Text Transformation, Find and Replace, Multiple Tabs and Autosave. Built in Rust and Tauri.
 				</p>
 				<button class="about-ok" onclick={closeAbout}>OK</button>
 			</div>
