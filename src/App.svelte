@@ -370,7 +370,7 @@
 	}
 
 	function handleSettingsChange(
-		patch: Partial<{ theme: Theme; fontSize: number; uiFontSize: number; fontFamily: string; wordWrap: boolean; spellcheck: boolean }>,
+		patch: Partial<{ theme: Theme; fontSize: number; uiFontSize: number; fontFamily: string; wordWrap: boolean; spellcheck: boolean; spellLang: string; cursorBlink: boolean; textColor: string }>,
 	) {
 		if (patch.theme !== undefined) theme = patch.theme;
 		if (patch.fontSize !== undefined) fontSize = patch.fontSize;
@@ -378,6 +378,9 @@
 		if (patch.fontFamily !== undefined) fontFamily = patch.fontFamily;
 		if (patch.wordWrap !== undefined) wordWrap = patch.wordWrap;
 		if (patch.spellcheck !== undefined) spellcheck = patch.spellcheck;
+		if (patch.spellLang !== undefined) spellLang = patch.spellLang;
+		if (patch.cursorBlink !== undefined) cursorBlink = patch.cursorBlink;
+		if (patch.textColor !== undefined) textColor = patch.textColor;
 		resolveTheme();
 		saveSettings();
 	}
