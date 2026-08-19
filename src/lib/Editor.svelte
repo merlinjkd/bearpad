@@ -201,21 +201,21 @@
 				backgroundColor: '#252526',
 				color: '#d4d4d4',
 			},
-			'.cm-panel.cm-panel-search': {
+			'.cm-panel.cm-search': {
 				backgroundColor: '#252526',
 				color: '#d4d4d4',
 			},
-			'.cm-panel.cm-panel-search input': {
+			'.cm-panel.cm-search input': {
 				backgroundColor: '#3c3c3c',
 				color: '#d4d4d4',
 				border: '1px solid #555',
 			},
-			'.cm-panel.cm-panel-search button': {
-				backgroundColor: '#3c3c3c',
-				color: '#d4d4d4',
-				border: '1px solid #555',
+			'.cm-panel.cm-search button': {
+				backgroundColor: '#e0e0e0',
+				color: '#1e1e1e',
+				border: '1px solid #888',
 			},
-			'.cm-panel.cm-panel-search label': { color: '#d4d4d4' },
+			'.cm-panel.cm-search label': { color: '#d4d4d4' },
 		};
 		if (themeName === 'light') {
 			return EditorView.theme({
