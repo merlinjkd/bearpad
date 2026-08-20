@@ -1,23 +1,16 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-
 	let { contextMenu, onhide }: { contextMenu: { x: number; y: number; items: any[] }; onhide: () => void } = $props();
 
-	let menuRef: HTMLDivElement;
-	// Anchor below the cursor by default; flip above if it would overflow the window.
-	let up = $state(false);
-	// Flip left if it would overflow the right edge.
-	let left = $state(false);
-
-	onMount(() => {
-		const r = menuRef.getBoundingClientRect();
-		const mh = r.height;
-		const mw = r.width;
-		const winW = window.innerWidth;
-		const winH = window.innerHeight;
-		up = contextMenu.y + mh > winH - 4;
-		left = contextMenu.x + mw > winW - 4;
-	});
+	// Split the app window at 50%. Cursor in the top half -> menu drops down;
+	// cursor in the bottom half -> menu pops up. Fixed/relative to the window
+	// (clientY is viewport-relative and the menu is position:fixed, so 50% of
+	// innerHeight is the natural midpoint). Keeping the flip class-based lets
+	// the menu anchor at the cursor and shift by its own size.
+	// ponytail: symmetric 50% split; pick per-side weights later if optical
+	// balance matters, but 50% is the standard and reads predictably.
+	const winH = window.innerHeight;
+	const up = contextMenu.y > winH / 2;
+	const left = contextMenu.x > window.innerWidth - 260;
 </script>
 
 <div
@@ -25,7 +18,6 @@
 	class:open-up={up}
 	class:open-left={left}
 	style="left: {contextMenu.x}px; top: {contextMenu.y}px"
-	bind:this={menuRef}
 	role="menu"
 >
 	{#each contextMenu.items as item}
