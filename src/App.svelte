@@ -21,8 +21,14 @@ import {
 
 	const FILTERS = [
 		{ name: 'Text', extensions: ['txt'] },
-		{ name: 'Markdown', extensions: ['md', 'markdown'] },
+		{ name: 'Markdown', extensions: ['md'] },
 	];
+
+	// Put the chosen default format first so the native save dialog presets it.
+	function prioritizedFilters(f: 'txt' | 'md') {
+		if (f === 'md') return [FILTERS[1], FILTERS[0]];
+		return FILTERS;
+	}
 
 	interface TabState {
 		id: number;
@@ -51,6 +57,7 @@ import {
 	let spellLang = $state('en_US');
 	let cursorBlink = $state(false);
 	let textColor = $state('');
+	let defaultFormat = $state<'txt' | 'md'>('txt');
 	let resolvedTheme = $state<'dark' | 'light'>('dark');
 	let editorTheme = $state<'dark' | 'light'>('dark');
 
@@ -300,7 +307,10 @@ import {
 	async function saveFileAs() {
 		const tab = activeTab();
 		if (!tab) return;
-		const selected = await showSaveDialog({ filters: FILTERS, defaultPath: 'untitled.txt' });
+		const selected = await showSaveDialog({
+			filters: prioritizedFilters(defaultFormat),
+			defaultPath: `untitled.${defaultFormat}`,
+		});
 		if (!selected) return;
 		const path = selected as string;
 		const content = tab.ref?.getContent() ?? '';
@@ -355,6 +365,7 @@ import {
 			if (s.spellLang) spellLang = s.spellLang;
 			if (s.cursorBlink != null) cursorBlink = s.cursorBlink;
 			if (s.textColor) textColor = s.textColor;
+			if (s.defaultFormat === 'md' || s.defaultFormat === 'txt') defaultFormat = s.defaultFormat;
 		} catch { /* defaults */ }
 		resolveTheme();
 	}
@@ -362,7 +373,7 @@ import {
 	async function saveSettings() {
 		try {
 			await invoke('write_settings', {
-				json: JSON.stringify({ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck, spellLang, cursorBlink, textColor }),
+				json: JSON.stringify({ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck, spellLang, cursorBlink, textColor, defaultFormat }),
 			});
 		} catch (e) {
 			console.error('Failed to save settings:', e);
@@ -387,7 +398,7 @@ import {
 	}
 
 	function handleSettingsChange(
-		patch: Partial<{ theme: Theme; fontSize: number; uiFontSize: number; fontFamily: string; wordWrap: boolean; spellcheck: boolean; spellLang: string; cursorBlink: boolean; textColor: string }>,
+		patch: Partial<{ theme: Theme; fontSize: number; uiFontSize: number; fontFamily: string; wordWrap: boolean; spellcheck: boolean; spellLang: string; cursorBlink: boolean; textColor: string; defaultFormat: 'txt' | 'md' }>,
 	) {
 		if (patch.theme !== undefined) theme = patch.theme;
 		if (patch.fontSize !== undefined) fontSize = patch.fontSize;
@@ -398,6 +409,7 @@ import {
 		if (patch.spellLang !== undefined) spellLang = patch.spellLang;
 		if (patch.cursorBlink !== undefined) cursorBlink = patch.cursorBlink;
 		if (patch.textColor !== undefined) textColor = patch.textColor;
+		if (patch.defaultFormat !== undefined) defaultFormat = patch.defaultFormat;
 		resolveTheme();
 		saveSettings();
 	}
@@ -788,7 +800,7 @@ import {
 
 	{#if showSettings}
 		<SettingsModal
-			settings={{ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck, spellLang, cursorBlink }}
+			settings={{ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck, spellLang, cursorBlink, textColor, defaultFormat }}
 			onChange={handleSettingsChange}
 			onClose={closeSettings}
 		/>

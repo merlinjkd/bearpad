@@ -9,6 +9,7 @@
 		spellLang?: string;
 		cursorBlink?: boolean;
 		textColor?: string;
+		defaultFormat?: 'txt' | 'md';
 	}
 
 	let {
@@ -170,6 +171,18 @@
 					/>
 					<button class="color-reset" onclick={() => onChange({ textColor: '' })}>Reset</button>
 				</div>
+			</div>
+
+			<div class="field">
+				<label for="default-format-select">Default File Format</label>
+				<select
+					id="default-format-select"
+					value={settings.defaultFormat || 'txt'}
+					onchange={(e) => onChange({ defaultFormat: (e.target as HTMLSelectElement).value as 'txt' | 'md' })}
+				>
+					<option value="txt">Text (.txt)</option>
+					<option value="md">Markdown (.md)</option>
+				</select>
 			</div>
 		</div>
 
