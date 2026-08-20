@@ -22,6 +22,7 @@
 	} = $props();
 
 	const FONT_OPTIONS = [
+		{ label: 'Consolas', value: "\"Consolas\", 'SF Mono', 'Fira Code', monospace" },
 		{ label: 'SF Mono', value: "'SF Mono', 'Fira Code', monospace" },
 		{ label: 'Fira Code', value: "'Fira Code', 'Fira Code VF', monospace" },
 		{ label: 'Cascadia Code', value: "'Cascadia Code', 'Cascadia Code PL', monospace" },

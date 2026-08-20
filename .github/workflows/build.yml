@@ -161,13 +161,18 @@ jobs:
             librsvg2-dev \
             libsoup-3.0-dev \
             libjavascriptcoregtk-4.1-dev \
-            libclang-dev
+            libclang-dev \
+            flatpak \
+            flatpak-builder
+          # Tauri's flatpak bundler fetches the GNOME runtime via flatpak-builder;
+          # provision the Flathub remote so the runner can pull it.
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
       - name: Install dependencies
         run: npm ci || npm install
 
-      - name: Build Linux
-        run: npm run tauri build -- --bundles deb
+      - name: Build Linux (deb + flatpak)
+        run: npm run tauri build -- --bundles deb,flatpak
         env:
           TAURI_SIGNING_PRIVATE_KEY: ""
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
@@ -180,6 +185,7 @@ jobs:
         run: |
           version="${{ needs.create-release.outputs.version }}"
           find src-tauri/target/release/bundle/deb -name "*.deb" -exec gh release upload "v$version" {} --clobber \;
+          find src-tauri/target/release/bundle/flatpak -name "*.flatpak" -exec gh release upload "v$version" {} --clobber \;
 
   publish:
     needs: [create-release, build-windows, build-macos, build-linux]

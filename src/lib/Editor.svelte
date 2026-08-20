@@ -41,16 +41,18 @@
 		onDirtyChange,
 		theme = 'dark',
 		fontSize = 18,
-		fontFamily = "'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
+		fontFamily = "\"Consolas\", 'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
 		wordWrap = true,
 		spellcheck = true,
 		spellLang = 'en_US',
 		cursorBlink = false,
 		textColor = '',
+		onStatusChange,
 	}: {
 		onReady?: (ref: EditorExposed) => void;
 		doc?: string;
 		onDirtyChange?: (dirty: boolean) => void;
+		onStatusChange?: (status: { line: number; col: number; selCount: number }) => void;
 		theme?: string;
 		fontSize?: number;
 		fontFamily?: string;
@@ -294,6 +296,15 @@
 						dirty = true;
 						syncDirty(true);
 					}
+					// cursor / selection moved (or doc changed) -> refresh status bar
+					if (update.selectionSet || update.docChanged) {
+						const sel = update.state.selection.main;
+						const head = sel.head;
+						const line = update.state.doc.lineAt(head).number;
+						const col = head - update.state.doc.lineAt(head).from + 1;
+						const selCount = sel.empty ? 0 : update.state.sliceDoc(sel.from, sel.to).length;
+						onStatusChange?.({ line, col, selCount });
+					}
 				}),
 			],
 		});
@@ -302,6 +313,9 @@
 			state,
 			parent: container,
 		});
+
+		// Seed the status bar with the initial cursor position.
+		onStatusChange?.({ line: 1, col: 1, selCount: 0 });
 	}
 
 	function getSelectedText(): string {

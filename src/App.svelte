@@ -7,6 +7,12 @@
 	import { open, save as showSaveDialog, confirm as showConfirm } from '@tauri-apps/plugin-dialog';
 	import { getCurrentWindow } from '@tauri-apps/api/window';
 	import bearpawIcon from './assets/bearpaw.png';
+import {
+	FilePlus, FolderOpen, Save, Info, Power,
+	Undo2, Redo2, Scissors, Copy, ClipboardPaste, Search,
+	ZoomIn, ZoomOut, RotateCcw, Moon, Sun, WrapText, SpellCheck,
+	CaseLower, CaseUpper, CaseSensitive,
+} from 'lucide-svelte';
 
 	const isMac = /mac/i.test(navigator.platform);
 	import { editorCommands } from './lib/commands';
@@ -32,12 +38,13 @@
 	let tabSeq = 1;
 	let untitledSeq = 2;
 	let dirtyMap = $state<Record<number, boolean>>({});
+	let status = $state({ line: 1, col: 1, selCount: 0 });
 	let showSettings = $state(false);
 	let showAbout = $state(false);
 	let appVersion = $state('');
 	let theme = $state<Theme>('dark');
 	let fontSize = $state(18);
-	let fontFamily = $state("'SF Mono', 'Fira Code', 'Cascadia Code', monospace");
+	let fontFamily = $state("\"Consolas\", 'SF Mono', 'Fira Code', 'Cascadia Code', monospace");
 	let uiFontSize = $state(16);
 	let wordWrap = $state(true);
 	let spellcheck = $state(true);
@@ -72,33 +79,34 @@
 			separator?: boolean;
 			action?: () => void;
 			disabled?: boolean | (() => boolean);
+			icon?: any;
 		}[];
 	}[] = [
 		{
 			label: 'File',
 			items: [
-				{ label: 'New', action: () => newFile() },
-				{ label: 'Open...', action: () => openFile() },
+				{ label: 'New', icon: FilePlus, action: () => newFile() },
+				{ label: 'Open...', icon: FolderOpen, action: () => openFile() },
 				{ separator: true },
-				{ label: 'Save', action: () => saveFile() },
-				{ label: 'Save As...', action: () => saveFileAs() },
+				{ label: 'Save', icon: Save, action: () => saveFile() },
+				{ label: 'Save As...', icon: Save, action: () => saveFileAs() },
 				{ separator: true },
-				{ label: 'About BearPad...', action: () => openAbout() },
+				{ label: 'About BearPad...', icon: Info, action: () => openAbout() },
 				{ separator: true },
-				{ label: 'Exit', action: () => getCurrentWindow().close() },
+				{ label: 'Exit', icon: Power, action: () => getCurrentWindow().close() },
 			],
 		},
 		{
 			label: 'Edit',
 			items: [
-				menuItem('undo'),
-				menuItem('redo'),
+				{ ...menuItem('undo'), icon: Undo2 },
+				{ ...menuItem('redo'), icon: Redo2 },
 				{ separator: true },
-				menuItem('cut'),
-				menuItem('copy'),
-				menuItem('paste'),
+				{ ...menuItem('cut'), icon: Scissors },
+				{ ...menuItem('copy'), icon: Copy },
+				{ ...menuItem('paste'), icon: ClipboardPaste },
 				{ separator: true },
-				menuItem('find'),
+				{ ...menuItem('find'), icon: Search },
 			],
 		},
 		{
@@ -106,16 +114,19 @@
 			items: [
 				{
 					label: 'Zoom In',
+					icon: ZoomIn,
 					action: () => handleSettingsChange({ fontSize: Math.min(32, fontSize + 1) }),
 				},
 				{
 					label: 'Zoom Out',
+					icon: ZoomOut,
 					action: () => handleSettingsChange({ fontSize: Math.max(10, fontSize - 1) }),
 				},
-				{ label: 'Reset Zoom', action: () => handleSettingsChange({ fontSize: 18 }) },
+				{ label: 'Reset Zoom', icon: RotateCcw, action: () => handleSettingsChange({ fontSize: 18 }) },
 				{ separator: true },
 				{
 					label: 'Toggle Theme',
+					icon: resolvedTheme === 'dark' ? Sun : Moon,
 					action: () =>
 						handleSettingsChange({
 							theme: resolvedTheme === 'dark' ? 'light' : 'dark',
@@ -123,17 +134,23 @@
 				},
 				{
 					label: 'Toggle Word Wrap',
+					icon: WrapText,
 					action: () => handleSettingsChange({ wordWrap: !wordWrap }),
 				},
 				{
 					label: 'Toggle Spell Check',
+					icon: SpellCheck,
 					action: () => handleSettingsChange({ spellcheck: !spellcheck }),
 				},
 			],
 		},
 		{
 			label: 'Text',
-			items: [menuItem('lowercase'), menuItem('uppercase'), menuItem('propercase')],
+			items: [
+				{ ...menuItem('lowercase'), icon: CaseLower },
+				{ ...menuItem('uppercase'), icon: CaseUpper },
+				{ ...menuItem('propercase'), icon: CaseSensitive },
+			],
 		},
 	];
 
@@ -660,6 +677,11 @@
 										openMenu = null;
 									}}
 								>
+									{#if item.icon}
+										<span class="menu-action-icon">
+											<svelte:component this={item.icon} size={15} strokeWidth={1.75} />
+										</span>
+									{/if}
 									{item.label}
 								</button>
 							{/if}
@@ -742,9 +764,22 @@
 					{spellLang}
 					{cursorBlink}
 					{textColor}
-				/>
+					onStatusChange={(s) => (status = s)}
+					/>
 			</div>
 		{/each}
+	</div>
+
+	<div class="status-bar" role="status">
+		<span class="status-path" title={activeTab()?.path ?? ''}>
+			{fileName(activeTab())}
+		</span>
+		<span class="status-right">
+			{#if status.selCount > 0}
+				<span class="status-item">{status.selCount} selected</span>
+			{/if}
+			<span class="status-item">Ln {status.line}, Col {status.col}</span>
+		</span>
 	</div>
 
 	{#if ctxMenu.show}
@@ -819,6 +854,40 @@
 		position: relative;
 		z-index: 1000;
 		flex-shrink: 0;
+	}
+	.status-bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		height: 24px;
+		padding: 0 10px;
+		background: var(--menu-bg);
+		color: var(--menu-text);
+		border-top: 1px solid var(--menu-border);
+		font-size: 0.8125em;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+		user-select: none;
+		flex-shrink: 0;
+	}
+	.status-path {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		opacity: 0.85;
+	}
+	.status-right {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		flex-shrink: 0;
+	}
+	.status-item {
+		white-space: nowrap;
+	}
+	.app-root[data-theme="light"] .status-bar {
+		background: #f3f3f3;
+		border-top-color: #d8d8d8;
 	}
 	.title-bar {
 		display: flex;
@@ -976,7 +1045,9 @@
 		padding: 4px 0;
 	}
 	.menu-action {
-		display: block;
+		display: flex;
+		align-items: center;
+		gap: 10px;
 		width: 100%;
 		text-align: left;
 		padding: 5px 16px;
@@ -985,6 +1056,13 @@
 		border: none;
 		color: var(--menu-text);
 		cursor: default;
+	}
+	.menu-action-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		opacity: 0.9;
 	}
 	.menu-action:hover {
 		background: #094771;

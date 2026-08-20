@@ -1,7 +1,7 @@
 {
   "name": "bearpad",
   "private": true,
-  "version": "0.2.22",
+  "version": "0.2.23",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -22,6 +22,7 @@
     "@tauri-apps/plugin-clipboard-manager": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.7.2",
     "codemirror": "^6.0.1",
+    "lucide-svelte": "^1.0.1",
     "marked": "^14.0.0"
   },
   "devDependencies": {
