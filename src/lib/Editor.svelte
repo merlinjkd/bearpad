@@ -238,8 +238,9 @@
 				'.cm-activeLineGutter': { backgroundColor: '#e8e8e8' },
 				'.cm-activeLine': { backgroundColor: '#f0f0f044' },
 				'.cm-cursor': { borderLeft: '2px solid #323232' },
-				            '.cm-selectionBackground': { backgroundColor: '#0078d4' },
-				            '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': { backgroundColor: '#0078d4' },
+				            '.cm-selectionBackground': { backgroundColor: '#b4d7ff !important' },
+				            '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, &.cm-focused .cm-selectionLayer .cm-selectionBackground': { backgroundColor: '#b4d7ff !important' },
+				            '.cm-content ::selection, .cm-content::selection': { color: '#000000' },
 				            '.cm-matchingBracket': { backgroundColor: '#d4d4d4' },
 				            ...spellSquiggle('#219'),
 				});
