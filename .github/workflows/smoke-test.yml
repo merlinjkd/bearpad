@@ -1,0 +1,49 @@
+name: Smoke Test Windows
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Tag version (e.g. v0.2.30)'
+        required: true
+        default: 'v0.2.30'
+
+jobs:
+  smoke-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure WebView2 (accepted binaries)
+        run: |
+          echo "Skip: runner has WebView2 via wv2bootstrapper acceptance"
+
+      - name: Download MSI
+        working-directory: ${{ github.workspace }}
+        run: |
+          $ver = "${{ github.event.inputs.version }}"
+          curl.exe -sL -o app.msi "https://github.com/merlinjkd/bearpad/releases/download/$ver/BearPad_$($ver.Substring(1))_x64_en-US.msi"
+          curl.exe -sL -o app.exe "https://github.com/merlinjkd/bearpad/releases/download/$ver/BearPad_$($ver.Substring(1))_x64-setup.exe"
+          Get-ChildItem app.*
+
+      - name: Install MSI
+        run: |
+          Start-Process msiexec.exe -ArgumentList '/i', "$pwd\app.msi", '/qn', '/norestart' -Wait
+          $inst = Get-ChildItem "C:\Program Files" -Recurse -Filter "bearpad.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($inst) { Write-Host "INSTALLED AT: $($inst.FullName)"; $inst.FullName | Out-File -Encoding ascii installed.txt }
+          else { Write-Host "NOT FOUND"; Get-ChildItem "C:\Program Files" | Select-Object Name }
+
+      - name: Launch and verify alive
+        shell: pwsh
+        run: |
+          $exe = Get-Content -Raw installed.txt
+          Write-Host "LAUNCHING: $exe"
+          $proc = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 15
+          if (Get-Process -Id $proc.Id -ErrorAction SilentlyContinue) {
+            Write-Host "WINDOWS: RUNNING after 15s — LAUNCH OK (pid $($proc.Id))"
+            Stop-Process -Id $proc.Id -Force
+          } else {
+            Write-Host "WINDOWS: exited early — FAIL"
+            exit 1
+          }
