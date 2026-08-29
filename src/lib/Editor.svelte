@@ -47,8 +47,6 @@
 		spellLang = 'en_US',
 		cursorBlink = false,
 		textColor = '',
-		highlightDark = '',
-		highlightLight = '',
 		onStatusChange,
 	}: {
 		onReady?: (ref: EditorExposed) => void;
@@ -63,8 +61,6 @@
 		spellLang?: string;
 		cursorBlink?: boolean;
 		textColor?: string;
-		highlightDark?: string;
-		highlightLight?: string;
 	} = $props();
 
 	let container: HTMLDivElement;
@@ -236,28 +232,27 @@
 			},
 		};
 		if (themeName === 'light') {
-			const sel = highlightLight || '#0078d4';
 			return EditorView.theme({
 				'&': { backgroundColor: '#ffffff', color: '#000000', height: '100%' },
 				'.cm-gutters': { backgroundColor: '#f5f5f5', color: '#999999', border: 'none' },
 				'.cm-activeLineGutter': { backgroundColor: '#e8e8e8' },
 				'.cm-activeLine': { backgroundColor: '#f0f0f044' },
 				'.cm-cursor': { borderLeft: '2px solid #323232' },
-				            '.cm-selectionBackground': { backgroundColor: sel },
-				            '.cm-focused .cm-selectionBackground': { backgroundColor: sel },
+				            '.cm-selectionBackground': { backgroundColor: '#0078d4' },
+				            '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': { backgroundColor: '#0078d4' },
 				            '.cm-matchingBracket': { backgroundColor: '#d4d4d4' },
 				            ...spellSquiggle('#219'),
 				});
 		}
-		const sel = highlightDark || '#0078d4';
 		return EditorView.theme({
 			'&': { backgroundColor: '#000000', color: '#F0F0F0', height: '100%' },
 			'.cm-gutters': { backgroundColor: '#252526', color: '#858585', border: 'none' },
 			'.cm-activeLineGutter': { backgroundColor: '#2a2d2e' },
 			'.cm-activeLine': { backgroundColor: '#2a2d2e44' },
 			'.cm-cursor': { borderLeft: '2px solid #fafafa' },
-			            '.cm-selectionBackground': { backgroundColor: sel },
-			            '.cm-focused .cm-selectionBackground': { backgroundColor: sel },
+			            '.cm-selectionBackground': { backgroundColor: '#264f78 !important' },
+			            '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, &.cm-focused .cm-selectionLayer .cm-selectionBackground': { backgroundColor: '#264f78 !important' },
+			            '.cm-content ::selection, .cm-content::selection': { color: '#ffffff' },
 			'.cm-matchingBracket': { backgroundColor: '#4b4b4b' },
 			...searchPanelDark,
 			...darkLinkOverride,
@@ -340,8 +335,6 @@
 
 	$effect(() => {
 		const th = theme;
-		const hd = highlightDark;
-		const hl = highlightLight;
 		if (!view) return;
 		view.dispatch({
 			effects: [themeCompartment.reconfigure(computeTheme(th))],

@@ -57,8 +57,6 @@ import {
 	let spellLang = $state('en_US');
 	let cursorBlink = $state(false);
 	let textColor = $state('');
-	let highlightDark = $state('');
-	let highlightLight = $state('');
 	let defaultFormat = $state<'txt' | 'md'>('txt');
 	let resolvedTheme = $state<'dark' | 'light'>('dark');
 	let editorTheme = $state<'dark' | 'light'>('dark');
@@ -367,8 +365,6 @@ import {
 			if (s.spellLang) spellLang = s.spellLang;
 			if (s.cursorBlink != null) cursorBlink = s.cursorBlink;
 			if (s.textColor) textColor = s.textColor;
-			if (s.highlightDark) highlightDark = s.highlightDark;
-			if (s.highlightLight) highlightLight = s.highlightLight;
 			if (s.defaultFormat === 'md' || s.defaultFormat === 'txt') defaultFormat = s.defaultFormat;
 		} catch { /* defaults */ }
 		resolveTheme();
@@ -377,7 +373,7 @@ import {
 	async function saveSettings() {
 		try {
 			await invoke('write_settings', {
-				json: JSON.stringify({ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck, spellLang, cursorBlink, textColor, highlightDark, highlightLight, defaultFormat }),
+				json: JSON.stringify({ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck, spellLang, cursorBlink, textColor, defaultFormat }),
 			});
 		} catch (e) {
 			console.error('Failed to save settings:', e);
@@ -402,7 +398,7 @@ import {
 	}
 
 	function handleSettingsChange(
-		patch: Partial<{ theme: Theme; fontSize: number; uiFontSize: number; fontFamily: string; wordWrap: boolean; spellcheck: boolean; spellLang: string; cursorBlink: boolean; textColor: string; highlightDark: string; highlightLight: string; defaultFormat: 'txt' | 'md' }>,
+		patch: Partial<{ theme: Theme; fontSize: number; uiFontSize: number; fontFamily: string; wordWrap: boolean; spellcheck: boolean; spellLang: string; cursorBlink: boolean; textColor: string; defaultFormat: 'txt' | 'md' }>,
 	) {
 		if (patch.theme !== undefined) theme = patch.theme;
 		if (patch.fontSize !== undefined) fontSize = patch.fontSize;
@@ -413,8 +409,6 @@ import {
 		if (patch.spellLang !== undefined) spellLang = patch.spellLang;
 		if (patch.cursorBlink !== undefined) cursorBlink = patch.cursorBlink;
 		if (patch.textColor !== undefined) textColor = patch.textColor;
-		if (patch.highlightDark !== undefined) highlightDark = patch.highlightDark;
-		if (patch.highlightLight !== undefined) highlightLight = patch.highlightLight;
 		if (patch.defaultFormat !== undefined) defaultFormat = patch.defaultFormat;
 		resolveTheme();
 		saveSettings();
@@ -782,8 +776,6 @@ import {
 					{spellLang}
 					{cursorBlink}
 					{textColor}
-					{highlightDark}
-					{highlightLight}
 					onStatusChange={(s) => (status = s)}
 					/>
 			</div>
@@ -808,7 +800,7 @@ import {
 
 	{#if showSettings}
 		<SettingsModal
-			settings={{ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck, spellLang, cursorBlink, textColor, highlightDark, highlightLight, defaultFormat }}
+			settings={{ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck, spellLang, cursorBlink, textColor, defaultFormat }}
 			onChange={handleSettingsChange}
 			onClose={closeSettings}
 		/>
