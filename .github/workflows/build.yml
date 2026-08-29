@@ -171,8 +171,8 @@ jobs:
       - name: Install dependencies
         run: npm ci || npm install
 
-      - name: Build Linux (deb + flatpak)
-        run: npm run tauri build -- --bundles deb,flatpak
+      - name: Build Linux (deb + appimage)
+        run: npm run tauri build -- --bundles deb,appimage
         env:
           TAURI_SIGNING_PRIVATE_KEY: ""
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
@@ -185,7 +185,7 @@ jobs:
         run: |
           version="${{ needs.create-release.outputs.version }}"
           find src-tauri/target/release/bundle/deb -name "*.deb" -exec gh release upload "v$version" {} --clobber \;
-          find src-tauri/target/release/bundle/flatpak -name "*.flatpak" -exec gh release upload "v$version" {} --clobber \;
+          find src-tauri/target/release/bundle/appimage -name "*.AppImage" -exec gh release upload "v$version" {} --clobber \;
 
   publish:
     needs: [create-release, build-windows, build-macos, build-linux]
