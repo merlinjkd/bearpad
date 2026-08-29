@@ -9,6 +9,8 @@
 		spellLang?: string;
 		cursorBlink?: boolean;
 		textColor?: string;
+		highlightDark?: string;
+		highlightLight?: string;
 		defaultFormat?: 'txt' | 'md';
 	}
 
@@ -170,6 +172,32 @@
 						onchange={(e) => onChange({ textColor: (e.target as HTMLInputElement).value })}
 					/>
 					<button class="color-reset" onclick={() => onChange({ textColor: '' })}>Reset</button>
+				</div>
+			</div>
+
+			<div class="field">
+				<label for="highlight-dark-input">Text Highlight Color (Dark Mode)</label>
+				<div class="color-row">
+					<input
+						id="highlight-dark-input"
+						type="color"
+						value={settings.highlightDark || '#0078d4'}
+						onchange={(e) => onChange({ highlightDark: (e.target as HTMLInputElement).value })}
+					/>
+					<button class="color-reset" onclick={() => onChange({ highlightDark: '' })}>Reset</button>
+				</div>
+			</div>
+
+			<div class="field">
+				<label for="highlight-light-input">Text Highlight Color (Light Mode)</label>
+				<div class="color-row">
+					<input
+						id="highlight-light-input"
+						type="color"
+						value={settings.highlightLight || '#0078d4'}
+						onchange={(e) => onChange({ highlightLight: (e.target as HTMLInputElement).value })}
+					/>
+					<button class="color-reset" onclick={() => onChange({ highlightLight: '' })}>Reset</button>
 				</div>
 			</div>
 
