@@ -200,16 +200,16 @@
 		const searchPanelDark = {
 			// the wrapper carries the light base-theme bg; must paint it too
 			'.cm-panels': {
-				backgroundColor: '#252526',
-				color: '#d4d4d4',
+				backgroundColor: '#1e1e1e',
+				color: '#F0F0F0',
 			},
 			'.cm-panel.cm-search': {
-				backgroundColor: '#252526',
-				color: '#d4d4d4',
+				backgroundColor: '#1e1e1e',
+				color: '#F0F0F0',
 			},
 			'.cm-panel.cm-search input': {
 				backgroundColor: '#3c3c3c',
-				color: '#d4d4d4',
+				color: '#F0F0F0',
 				border: '1px solid #555',
 			},
 			'.cm-panel.cm-search button': {
@@ -217,11 +217,11 @@
 				color: '#1e1e1e',
 				border: '1px solid #888',
 			},
-			'.cm-panel.cm-search label': { color: '#d4d4d4' },
+			'.cm-panel.cm-search label': { color: '#F0F0F0' },
 			// the close X sits above the panel; give it a visible glyph + hover
 			'.cm-panel.cm-search [name=close]': {
 				backgroundColor: 'transparent',
-				color: '#d4d4d4',
+				color: '#F0F0F0',
 				fontSize: '14px',
 				padding: '2px 6px',
 				cursor: 'pointer',
@@ -233,25 +233,25 @@
 		};
 		if (themeName === 'light') {
 			return EditorView.theme({
-				'&': { backgroundColor: '#ffffff', color: '#333333', height: '100%' },
+				'&': { backgroundColor: '#ffffff', color: '#000000', height: '100%' },
 				'.cm-gutters': { backgroundColor: '#f5f5f5', color: '#999999', border: 'none' },
 				'.cm-activeLineGutter': { backgroundColor: '#e8e8e8' },
 				'.cm-activeLine': { backgroundColor: '#f0f0f044' },
 				'.cm-cursor': { borderLeft: '2px solid #323232' },
-				            '.cm-selectionBackground': { backgroundColor: '#f8f8f8' },
-				            '.cm-focused .cm-selectionBackground': { backgroundColor: '#f8f8f8' },
+				            '.cm-selectionBackground': { backgroundColor: '#0078d4' },
+				            '.cm-focused .cm-selectionBackground': { backgroundColor: '#0078d4' },
 				            '.cm-matchingBracket': { backgroundColor: '#d4d4d4' },
 				            ...spellSquiggle('#219'),
 				});
 		}
 		return EditorView.theme({
-			'&': { backgroundColor: '#1e1e1e', color: '#d4d4d4', height: '100%' },
+			'&': { backgroundColor: '#000000', color: '#F0F0F0', height: '100%' },
 			'.cm-gutters': { backgroundColor: '#252526', color: '#858585', border: 'none' },
 			'.cm-activeLineGutter': { backgroundColor: '#2a2d2e' },
 			'.cm-activeLine': { backgroundColor: '#2a2d2e44' },
 			'.cm-cursor': { borderLeft: '2px solid #fafafa' },
-			            '.cm-selectionBackground': { backgroundColor: '#f0f0f0' },
-			            '.cm-focused .cm-selectionBackground': { backgroundColor: '#f0f0f0' },
+			            '.cm-selectionBackground': { backgroundColor: '#0078d4' },
+			            '.cm-focused .cm-selectionBackground': { backgroundColor: '#0078d4' },
 			'.cm-matchingBracket': { backgroundColor: '#4b4b4b' },
 			...searchPanelDark,
 			...darkLinkOverride,

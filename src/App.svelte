@@ -834,22 +834,22 @@ import {
 	:global(body) {
 		margin: 0;
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-		background: #1e1e1e;
-		color: #d4d4d4;
+		background: #000000;
+		color: #F0F0F0;
 		--menu-bg: #252526;
 		--menu-border: #3c3c3c;
 		--menu-hover: #37373d;
 		--menu-sep: #3c3c3c;
-		--menu-text: #d4d4d4;
+		--menu-text: #F0F0F0;
 	}
 	:global(body[data-theme="light"]) {
 		background: #ffffff;
-		color: #333333;
+		color: #000000;
 		--menu-bg: #f3f3f3;
 		--menu-border: #d4d4d4;
 		--menu-hover: #e2e2e2;
 		--menu-sep: #d4d4d4;
-		--menu-text: #1a1a1a;
+		--menu-text: #000000;
 	}
 	.app-root {
 		display: flex;
