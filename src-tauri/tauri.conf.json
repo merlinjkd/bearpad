@@ -32,6 +32,11 @@
     "createUpdaterArtifacts": false
   },
   "plugins": {
-    "clipboard-manager": null
+    "clipboard-manager": {
+      "permissions": [
+        "clipboard-manager:allow-read-text",
+        "clipboard-manager:allow-write-text"
+      ]
+    }
   }
 }

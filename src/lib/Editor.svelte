@@ -238,10 +238,10 @@
 				'.cm-activeLineGutter': { backgroundColor: '#e8e8e8' },
 				'.cm-activeLine': { backgroundColor: '#f0f0f044' },
 				'.cm-cursor': { borderLeft: '2px solid #323232' },
-				'.cm-selectionBackground': { backgroundColor: '#add6ff' },
-				'.cm-focused .cm-selectionBackground': { backgroundColor: '#add6ff' },
-				'.cm-matchingBracket': { backgroundColor: '#d4d4d4' },
-				...spellSquiggle('#219'),
+				            '.cm-selectionBackground': { backgroundColor: '#f8f8f8' },
+				            '.cm-focused .cm-selectionBackground': { backgroundColor: '#f8f8f8' },
+				            '.cm-matchingBracket': { backgroundColor: '#d4d4d4' },
+				            ...spellSquiggle('#219'),
 				});
 		}
 		return EditorView.theme({
@@ -250,8 +250,8 @@
 			'.cm-activeLineGutter': { backgroundColor: '#2a2d2e' },
 			'.cm-activeLine': { backgroundColor: '#2a2d2e44' },
 			'.cm-cursor': { borderLeft: '2px solid #fafafa' },
-			'.cm-selectionBackground': { backgroundColor: '#264f78' },
-			'.cm-focused .cm-selectionBackground': { backgroundColor: '#264f78' },
+			            '.cm-selectionBackground': { backgroundColor: '#f0f0f0' },
+			            '.cm-focused .cm-selectionBackground': { backgroundColor: '#f0f0f0' },
 			'.cm-matchingBracket': { backgroundColor: '#4b4b4b' },
 			...searchPanelDark,
 			...darkLinkOverride,
