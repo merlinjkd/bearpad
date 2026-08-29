@@ -4,14 +4,15 @@
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::panic;
+use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
-use std::path::PathBuf;
+use bearpad_lib;
 
 fn main() {
     // Set up panic logging to a file in the temp directory
     let log_dir = std::env::temp_dir();
     let log_file_path = log_dir.join("bearpad_panic.log");
-    let mut file = OpenOptions::new()
+    let file = OpenOptions::new()
         .create(true)
         .append(true)
         .open(&log_file_path)
@@ -29,20 +30,18 @@ fn main() {
                     std::fs::File::create("/dev/null").unwrap()
                 })
         });
+    let file = Arc::new(Mutex::new(file));
 
-    let _ = writeln!(file, "Application started at {:?}", SystemTime::now());
+    let _ = writeln!(file.lock().unwrap(), "Application started at {:?}", SystemTime::now());
 
     // Install a panic hook that writes to our log file
-    let hook = panic::take_hook();
+    let file_clone = Arc::clone(&file);
     panic::set_hook(Box::new(move |panic_info| {
-        let _ = writeln!(file, "Panic: {}", panic_info);
-        hook(panic_info);
+        if let Ok(mut f) = file_clone.lock() {
+            let _ = writeln!(f, "Panic: {}", panic_info);
+        }
     }));
 
     // Run the Tauri application
-    if let Err(e) = bearpad_lib::run() {
-        let _ = writeln!(file, "Error running Tauri app: {}", e);
-        // Optionally, we could show an error dialog here, but for now just exit.
-        std::process::exit(1);
-    }
+    bearpad_lib::run();
 }
