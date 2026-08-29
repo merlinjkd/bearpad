@@ -5,10 +5,11 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::panic;
 use std::time::SystemTime;
+use std::path::PathBuf;
 
 fn main() {
     // Set up panic logging to a file in the temp directory
-    let log_dir = std::env::temp_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+    let log_dir = std::env::temp_dir();
     let log_file_path = log_dir.join("bearpad_panic.log");
     let mut file = OpenOptions::new()
         .create(true)
