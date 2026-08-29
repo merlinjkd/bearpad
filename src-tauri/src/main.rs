@@ -8,11 +8,7 @@ use std::time::SystemTime;
 
 fn main() {
     // Set up panic logging to a file in the temp directory
-    let log_dir = if let Ok(path) = std::env::temp_dir() {
-        path
-    } else {
-        std::path::PathBuf::from(".")
-    };
+    let log_dir = std::env::temp_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
     let log_file_path = log_dir.join("bearpad_panic.log");
     let mut file = OpenOptions::new()
         .create(true)
@@ -45,5 +41,7 @@ fn main() {
     // Run the Tauri application
     if let Err(e) = bearpad_lib::run() {
         let _ = writeln!(file, "Error running Tauri app: {}", e);
+        // Optionally, we could show an error dialog here, but for now just exit.
+        std::process::exit(1);
     }
 }
