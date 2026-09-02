@@ -246,7 +246,7 @@
 				});
 		}
 		return EditorView.theme({
-			'&': { backgroundColor: '#000000', color: '#F0F0F0', height: '100%' },
+			'&': { backgroundColor: '#1E1E1E', color: '#E0E0E0', height: '100%' },
 			'.cm-gutters': { backgroundColor: '#252526', color: '#858585', border: 'none' },
 			'.cm-activeLineGutter': { backgroundColor: '#2a2d2e' },
 			'.cm-activeLine': { backgroundColor: '#2a2d2e44' },
