@@ -39,10 +39,10 @@ import {
 		lastChange?: number;
 	}
 
-	let tabs = $state<TabState[]>([{ id: 0, path: null, doc: '', ref: null, name: 'Untitled 1' }]);
+	let tabs = $state<TabState[]>([{ id: 0, path: null, doc: '', ref: null, name: 'new 1' }]);
 	let activeTabId = $state(0);
 	let tabSeq = 1;
-	let untitledSeq = 2;
+	let newTabSeq = 2;
 	let dirtyMap = $state<Record<number, boolean>>({});
 	let status = $state({ line: 1, col: 1, selCount: 0 });
 	let showSettings = $state(false);
@@ -164,8 +164,8 @@ import {
 	// ─── helpers ────────────────────────────────────────
 
 	function fileName(tab: TabState | null) {
-		if (!tab?.path) return tab?.name ?? 'Untitled';
-		return tab.path.split('/').pop() || tab.path.split('\\').pop() || 'Untitled';
+		if (!tab?.path) return tab?.name ?? 'new';
+		return tab.path.split('/').pop() || tab.path.split('\\').pop() || 'new';
 	}
 
 	function activeTab() {
@@ -202,7 +202,7 @@ import {
 			(t) => !t.path && (dirtyMap[t.id] || (t.ref?.getContent() ?? '').length > 0)
 		);
 		const payload = JSON.stringify({
-			untitledSeq,
+			untitledSeq: newTabSeq,
 			tabs: untitled.map((t) => ({ name: t.name, content: t.ref?.getContent() ?? '' })),
 		});
 		try {
@@ -224,12 +224,12 @@ import {
 						path: null,
 						doc: r.content ?? '',
 						ref: null,
-						name: r.name ?? `Untitled ${untitledSeq}`,
+						name: r.name ?? `new ${newTabSeq}`,
 					};
 					tabs.push(tab);
 				}
 				activeTabId = tabs[0]?.id ?? null;
-				untitledSeq = Math.max(untitledSeq, (rec.untitledSeq ?? 1) + tabs.length);
+				newTabSeq = Math.max(newTabSeq, (rec.untitledSeq ?? 1) + tabs.length);
 				updateTitle();
 			}
 		} catch {
@@ -260,7 +260,7 @@ import {
 	// ─── file operations ─────────────────────────────────
 
 	async function newFile() {
-		const tab: TabState = { id: tabSeq++, path: null, doc: '', ref: null, name: `Untitled ${untitledSeq++}` };
+		const tab: TabState = { id: tabSeq++, path: null, doc: '', ref: null, name: `new ${newTabSeq++}` };
 		tabs.push(tab);
 		activeTabId = tab.id;
 		updateTitle();
@@ -634,7 +634,7 @@ import {
 <div class="app-root" data-theme={resolvedTheme} style="--ui-font-size:{uiFontSize}px">
 	<div class="title-bar" class:title-bar-mac={isMac} data-tauri-drag-region>
 		<img class="title-bar-icon" src={bearpawIcon} alt="" draggable="false" />
-		<span class="title-bar-title" data-tauri-drag-region>BearPad</span>
+		<span class="title-bar-title" data-tauri-drag-region>BearPad - {fileName(activeTab())}</span>
 		{#if !isMac}
 			<div class="title-bar-controls">
 				<button class="tb-btn" aria-label="Minimize" onclick={() => getCurrentWindow().minimize()}>
@@ -709,7 +709,7 @@ import {
 			title="Settings"
 			onclick={() => openSettings()}
 		>
-			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 				<circle cx="12" cy="12" r="3"></circle>
 				<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
 			</svg>
@@ -1021,8 +1021,7 @@ import {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 30px;
-		height: 28px;
+		width: 34px;
 		margin-right: 4px;
 		border: none;
 		border-radius: 6px;
