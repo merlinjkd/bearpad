@@ -428,13 +428,43 @@
 				},
 
 				handlePaste: async () => {
+					// Windows: readText() can return '' for content copied from OTHER
+					// apps, and navigator.clipboard.readText() throws (WebView2 denies
+					// async clipboard permission), which made right-click paste a
+					// silent no-op. Retry the plugin read, then fall back to a
+					// textarea + execCommand('paste') (allowed on a user gesture).
 					let rawText = '';
 					try {
 						rawText = (await readText()) ?? '';
-						if (!rawText) rawText = await navigator.clipboard.readText();
 					} catch {
+						rawText = '';
+					}
+					if (!rawText) {
+						await new Promise((r) => setTimeout(r, 60));
+						try {
+							rawText = (await readText()) ?? '';
+						} catch {
+							rawText = '';
+						}
+					}
+					if (!rawText) {
 						try {
 							rawText = await navigator.clipboard.readText();
+						} catch {
+							rawText = '';
+						}
+					}
+					if (!rawText) {
+						try {
+							const ta = document.createElement('textarea');
+							ta.style.position = 'fixed';
+							ta.style.opacity = '0';
+							document.body.appendChild(ta);
+							ta.focus();
+							if (document.execCommand('paste')) {
+								rawText = ta.value;
+							}
+							ta.remove();
 						} catch {
 							rawText = '';
 						}
