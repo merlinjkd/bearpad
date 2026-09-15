@@ -233,7 +233,7 @@
 		};
 		if (themeName === 'light') {
 			return EditorView.theme({
-				'&': { backgroundColor: '#ffffff', color: '#000000', height: '100%' },
+				'&': { backgroundColor: '#F1ECDF', color: '#37342E', height: '100%' },
 				'.cm-gutters': { backgroundColor: '#f5f5f5', color: '#999999', border: 'none' },
 				'.cm-activeLineGutter': { backgroundColor: '#e8e8e8' },
 				'.cm-activeLine': { backgroundColor: '#f0f0f044' },

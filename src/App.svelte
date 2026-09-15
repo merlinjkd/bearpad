@@ -843,8 +843,8 @@ import {
 		--menu-text: #F0F0F0;
 	}
 	:global(body[data-theme="light"]) {
-		background: #ffffff;
-		color: #000000;
+		background: #F1ECDF;
+		color: #37342E;
 		--menu-bg: #f3f3f3;
 		--menu-border: #d4d4d4;
 		--menu-hover: #e2e2e2;
