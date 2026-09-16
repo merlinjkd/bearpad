@@ -165,7 +165,8 @@ import {
 
 	function fileName(tab: TabState | null) {
 		if (!tab?.path) return tab?.name ?? 'new';
-		return tab.path.split('/').pop() || tab.path.split('\\').pop() || 'new';
+		// Windows paths use '\' — splitting on '/' alone returns the whole path there.
+		return tab.path.split(/[/\\]/).pop() || 'new';
 	}
 
 	function activeTab() {
