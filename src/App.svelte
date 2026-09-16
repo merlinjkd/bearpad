@@ -842,15 +842,21 @@ import {
 		--menu-hover: #37373d;
 		--menu-sep: #3c3c3c;
 		--menu-text: #F0F0F0;
+		--title-bg: #252526;
+		--title-text: #F0F0F0;
 	}
+	/* Light palette: Bearded Theme "Milkshake Vanilla Banana"
+	   (editor bg/fg, menu bar bg/fg, title bar bg/fg only) */
 	:global(body[data-theme="light"]) {
-		background: #F1ECDF;
-		color: #37342E;
-		--menu-bg: #f3f3f3;
-		--menu-border: #d4d4d4;
-		--menu-hover: #e2e2e2;
-		--menu-sep: #d4d4d4;
+		background: #ece7da;
+		color: #000000;
+		--menu-bg: #efebe1;
+		--menu-border: #d2c6a7;
+		--menu-hover: #ddd4bd;
+		--menu-sep: #d2c6a7;
 		--menu-text: #000000;
+		--title-bg: #d5c9ac;
+		--title-text: #555045;
 	}
 	.app-root {
 		display: flex;
@@ -898,17 +904,13 @@ import {
 	.status-item {
 		white-space: nowrap;
 	}
-	.app-root[data-theme="light"] .status-bar {
-		background: #f3f3f3;
-		border-top-color: #d8d8d8;
-	}
 	.title-bar {
 		display: flex;
 		align-items: center;
 		gap: 10px;
 		height: 40px;
 		padding: 0 12px;
-		background: var(--menu-bg);
+		background: var(--title-bg);
 		border-bottom: 1px solid var(--menu-border);
 		user-select: none;
 		flex-shrink: 0;
@@ -925,7 +927,7 @@ import {
 	.title-bar-title {
 		font-size: 16px;
 		font-weight: 600;
-		color: var(--menu-text);
+		color: var(--title-text);
 	}
 	.title-bar-controls {
 		margin-left: auto;
@@ -938,7 +940,7 @@ import {
 		height: 30px;
 		border: none;
 		background: transparent;
-		color: var(--menu-text);
+		color: var(--title-text);
 		font-size: 13px;
 		cursor: pointer;
 		display: flex;
@@ -1179,23 +1181,8 @@ import {
 	.app-root[data-theme="light"] .tab-dirty {
 		color: #555555;
 	}
-	.app-root[data-theme="light"] .menu-bar {
-		background: #f3f3f3;
-		border-bottom-color: #d8d8d8;
-	}
-	.app-root[data-theme="light"] .menu-item.open .menu-label,
-	.app-root[data-theme="light"] .menu-item:hover .menu-label {
-		background: #e6e6e6;
-	}
-	.app-root[data-theme="light"] .menu-dropdown {
-		background: #f3f3f3;
-		border-color: #d0d0d0;
-	}
 	.app-root[data-theme="light"] .menu-action:hover {
-		background: #0078d4;
-		color: #ffffff;
-	}
-	.app-root[data-theme="light"] .menu-sep {
-		background: #d8d8d8;
+		background: var(--menu-hover);
+		color: var(--menu-text);
 	}
 </style>
