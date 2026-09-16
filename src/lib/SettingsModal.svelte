@@ -62,8 +62,8 @@
 				</div>
 			</div>
 
-			<div class="field" role="group" aria-label="Font Size">
-				<div class="radio-label">Font Size: {settings.fontSize}px</div>
+			<div class="field" role="group" aria-label="Editor Font Size">
+				<div class="radio-label">Editor Font Size: {settings.fontSize}px</div>
 				<div class="size-controls">
 					<button class="size-btn" onclick={() => onChange({ fontSize: Math.max(10, settings.fontSize - 1) })}>–</button>
 					<input
@@ -78,8 +78,8 @@
 				</div>
 			</div>
 
-			<div class="field" role="group" aria-label="UI Font Size">
-				<div class="radio-label">UI Font Size: {settings.uiFontSize}px</div>
+			<div class="field" role="group" aria-label="Menu UI Font Size">
+				<div class="radio-label">Menu UI Font Size: {settings.uiFontSize}px</div>
 				<div class="size-controls">
 					<button class="size-btn" onclick={() => onChange({ uiFontSize: Math.max(12, settings.uiFontSize - 1) })}>–</button>
 					<input
