@@ -163,31 +163,43 @@
 	function spellCheckPlugin() {
 		let timer: number | undefined;
 		let gen = 0;
+		// Run a check against the view's CURRENT document. `delay` 0 = catch-up scan
+		// (fresh plugin), 400 = debounce while typing.
+		function schedule(view: EditorView, delay: number) {
+			clearTimeout(timer);
+			const myGen = ++gen;
+			timer = window.setTimeout(async () => {
+				if (myGen !== gen) return;
+				try {
+					const text = view.state.doc.toString();
+					const hits = await invoke<{ start: number; end: number; word: string }[]>(
+						'spell_check',
+						{ text, lang: langRef }
+					);
+					if (myGen !== gen) return;
+					view.dispatch({
+						effects: setSpellErrors.of(hits.map((h) => ({ from: h.start, to: h.end }))),
+					});
+				} catch {
+					/* not running inside Tauri (dev browser) */
+				}
+			}, delay);
+		}
 		return ViewPlugin.fromClass(
 			class {
+				constructor(view: EditorView) {
+					// A plugin created by (re)configuring the compartment never receives a
+					// docChanged update, so without this catch-up scan re-enabling spell
+					// check would look dead until the next keystroke — and existing file
+					// content was never checked when a document was opened.
+					schedule(view, 0);
+				}
 				update(update: ViewUpdate) {
 					const isRecheck = update.transactions.some((tr) =>
 						tr.effects.some((e) => e.is(recheckSpell))
 					);
 					if (!update.docChanged && !isRecheck) return;
-					clearTimeout(timer);
-					const myGen = ++gen;
-					timer = window.setTimeout(async () => {
-						if (myGen !== gen) return;
-						try {
-							const text = update.state.doc.toString();
-							const hits = await invoke<{ start: number; end: number; word: string }[]>(
-								'spell_check',
-								{ text, lang: langRef }
-							);
-							if (myGen !== gen) return;
-							update.view.dispatch({
-								effects: setSpellErrors.of(hits.map((h) => ({ from: h.start, to: h.end }))),
-							});
-						} catch {
-							/* not running inside Tauri (dev browser) */
-						}
-					}, 400);
+					schedule(update.view, 400);
 				}
 				destroy() {
 					clearTimeout(timer);
