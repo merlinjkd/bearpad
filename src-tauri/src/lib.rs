@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use hunspell_rs::{CheckResult, Hunspell};
 use tauri::Manager;
+use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 const EN_US_AFF: &[u8] = include_bytes!("../dicts/en_US.aff");
@@ -226,6 +227,38 @@ fn app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
+/// Menu paste (right-click -> Paste) cannot use the webview clipboard APIs on
+/// Windows: `navigator.clipboard.readText()` is denied by WebView2, and
+/// `document.execCommand('paste')` is disabled for web content outright, so both
+/// are dead ends there. This reads through the plugin's Rust side instead and
+/// RETRIES, because a Windows clipboard read transiently fails while the source
+/// app still holds the clipboard open - which is what made menu paste look random.
+///
+/// Runs on a blocking thread on purpose: the plugin documents that its read must
+/// not run on the main thread (Linux deadlock), and spawn_blocking also contains
+/// a panic from a poisoned clipboard mutex instead of taking the app down.
+#[tauri::command]
+async fn read_clipboard_text(app: tauri::AppHandle) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut last = String::from("clipboard read failed");
+        for attempt in 0..5u32 {
+            match app.clipboard().read_text() {
+                // An empty string is NOT success: on Windows a contended read can
+                // come back empty rather than erroring, so retry it like a failure.
+                Ok(t) if !t.is_empty() => return Ok(t),
+                Ok(_) => last = String::from("clipboard is empty"),
+                Err(e) => last = e.to_string(),
+            }
+            if attempt < 4 {
+                std::thread::sleep(std::time::Duration::from_millis(15 * (1 << attempt)));
+            }
+        }
+        Err(last)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[tauri::command]
 fn suggest_spellings(
     word: String,
@@ -398,6 +431,7 @@ pub fn run() {
             suggest_spellings,
             app_version,
             add_to_dictionary,
+            read_clipboard_text,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

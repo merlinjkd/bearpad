@@ -7,7 +7,7 @@
 	import { syntaxHighlighting, defaultHighlightStyle, syntaxTree } from '@codemirror/language';
 	import { searchKeymap, search, highlightSelectionMatches, openSearchPanel, selectMatches, replaceAll } from '@codemirror/search';
 	import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
-	import { writeText, readText } from '@tauri-apps/plugin-clipboard-manager';
+	import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 	import { invoke } from '@tauri-apps/api/core';
 	import { transformCase, type TransformType } from './commands';
 
@@ -440,43 +440,23 @@
 				},
 
 				handlePaste: async () => {
-					// Windows: readText() can return '' for content copied from OTHER
-					// apps, and navigator.clipboard.readText() throws (WebView2 denies
-					// async clipboard permission), which made right-click paste a
-					// silent no-op. Retry the plugin read, then fall back to a
-					// textarea + execCommand('paste') (allowed on a user gesture).
+					// Menu paste must NOT use the webview clipboard APIs on Windows:
+					// navigator.clipboard.readText() is denied by WebView2, and
+					// document.execCommand('paste') is disabled for web content
+					// outright, so BOTH are dead ends there (v0.2.36 shipped on the
+					// wrong assumption that execCommand was a working last resort).
+					// Read through the Rust side, which retries - a Windows clipboard
+					// read transiently fails while the source app still holds it open.
 					let rawText = '';
 					try {
-						rawText = (await readText()) ?? '';
-					} catch {
-						rawText = '';
-					}
-					if (!rawText) {
-						await new Promise((r) => setTimeout(r, 60));
-						try {
-							rawText = (await readText()) ?? '';
-						} catch {
-							rawText = '';
-						}
-					}
-					if (!rawText) {
+						rawText = (await invoke<string>('read_clipboard_text')) ?? '';
+					} catch (e) {
+						// No Tauri runtime (plain dev browser): browser API is all there is.
+						// Logged so a real Windows failure leaves evidence instead of
+						// another silent no-op - paste has been mis-reported twice.
+						console.error('[paste] read_clipboard_text failed:', e);
 						try {
 							rawText = await navigator.clipboard.readText();
-						} catch {
-							rawText = '';
-						}
-					}
-					if (!rawText) {
-						try {
-							const ta = document.createElement('textarea');
-							ta.style.position = 'fixed';
-							ta.style.opacity = '0';
-							document.body.appendChild(ta);
-							ta.focus();
-							if (document.execCommand('paste')) {
-								rawText = ta.value;
-							}
-							ta.remove();
 						} catch {
 							rawText = '';
 						}

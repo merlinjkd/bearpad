@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicegram/nicegram/refs/heads/main/src-tauri/tauri.conf.json",
   "productName": "BearPad",
-  "version": "0.2.40",
+  "version": "0.2.41",
   "identifier": "com.merlinjkd.bearpad",
   "build": {
     "frontendDist": "../dist",
