@@ -14,7 +14,6 @@ import {
 	CaseLower, CaseUpper, CaseSensitive,
 } from 'lucide-svelte';
 
-	const isMac = /mac/i.test(navigator.platform);
 	import { editorCommands } from './lib/commands';
 
 	type Theme = 'dark' | 'light' | 'system';
@@ -640,22 +639,23 @@ import {
 </script>
 
 <div class="app-root" data-theme={resolvedTheme} style="--ui-font-size:{uiFontSize}px">
-	<div class="title-bar" class:title-bar-mac={isMac} data-tauri-drag-region>
+	<div class="title-bar" data-tauri-drag-region>
 		<img class="title-bar-icon" src={bearpawIcon} alt="" draggable="false" />
 		<span class="title-bar-title" data-tauri-drag-region>BearPad - {fileName(activeTab())}</span>
-		{#if !isMac}
-			<div class="title-bar-controls">
-				<button class="tb-btn" aria-label="Minimize" onclick={() => getCurrentWindow().minimize()}>
-					<span class="tb-glyph">─</span>
-				</button>
-				<button class="tb-btn" aria-label="Maximize" onclick={() => getCurrentWindow().toggleMaximize()}>
-					<span class="tb-glyph">□</span>
-				</button>
-				<button class="tb-btn tb-close" aria-label="Close" onclick={() => getCurrentWindow().close()}>
-					<span class="tb-glyph">✕</span>
-				</button>
-			</div>
-		{/if}
+		<!-- Window controls are hand-drawn on EVERY platform. There is deliberately no
+		     `{#if !isMac}` branch and no macOS overlay: one framing code path for all
+		     three OSes. See the cross-platform UI standard in the tauri-desktop-app skill. -->
+		<div class="title-bar-controls">
+			<button class="tb-btn" aria-label="Minimize" onclick={() => getCurrentWindow().minimize()}>
+				<span class="tb-glyph">─</span>
+			</button>
+			<button class="tb-btn" aria-label="Maximize" onclick={() => getCurrentWindow().toggleMaximize()}>
+				<span class="tb-glyph">□</span>
+			</button>
+			<button class="tb-btn tb-close" aria-label="Close" onclick={() => getCurrentWindow().close()}>
+				<span class="tb-glyph">✕</span>
+			</button>
+		</div>
 	</div>
 	<div class="menu-bar" role="menubar">
 		{#each menus as menu, i (menu.label)}
@@ -922,9 +922,6 @@ import {
 		user-select: none;
 		flex-shrink: 0;
 		-webkit-app-region: drag;
-	}
-	.title-bar-mac {
-		padding-left: 78px;
 	}
 	.title-bar-icon {
 		width: 24px;
