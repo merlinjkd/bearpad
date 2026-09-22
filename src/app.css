@@ -1,0 +1,29 @@
+/*
+ * Tailwind v4 — infrastructure only (BearPad migration, step 1).
+ *
+ * Deliberately does NOT import the default entry (`@import "tailwindcss"`),
+ * because that also pulls in preflight (@layer base), which:
+ *   - resets margin/padding/border on EVERY element  (`*, ::before, ::after`)
+ *   - sets `html { line-height: 1.5 }`
+ *   - makes form controls `font: inherit` (BearPad's buttons are Arial 13.33px)
+ *   - resets lists, headings, links, images, etc.
+ * BearPad's existing CSS was written against browser defaults, so preflight
+ * would visibly shift the layout before a single component is migrated.
+ *
+ * theme + utilities only:
+ *   - theme      -> CSS custom properties; tree-shaken, emits only what is used
+ *   - utilities  -> generated only for utility classes actually found in source,
+ *                   so with no component migrated yet this compiles to nothing
+ *
+ * Net effect today: zero visual change, verified by comparing computed styles
+ * before/after in the running app.
+ *
+ * WHEN THE PER-COMPONENT MIGRATION IS COMPLETE, add preflight back:
+ *   @import "tailwindcss/preflight.css" layer(base);
+ * ...and re-verify every surface, because it resets the defaults the old CSS
+ * was written against.
+ */
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
