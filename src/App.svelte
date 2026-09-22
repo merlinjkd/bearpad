@@ -177,7 +177,14 @@ import {
 		try {
 			const tab = activeTab();
 			const win = getCurrentWindow();
-			win.setTitle(`BearPad — ${fileName(tab)}${tab?.ref?.isDirty() ? ' ●' : ''}`);
+			// setTitle returns a Promise, so the try/catch below only guards
+			// SYNCHRONOUS failures. A rejected call (e.g. the permission was
+			// missing) surfaces as an unhandled rejection instead of a throw —
+			// which is exactly how the missing core:window:allow-set-title
+			// capability stayed invisible. Catch it explicitly.
+			win
+				.setTitle(`BearPad — ${fileName(tab)}${tab?.ref?.isDirty() ? ' ●' : ''}`)
+				.catch(() => {});
 		} catch {
 			/* title is cosmetic; never let it break the mount chain */
 		}
