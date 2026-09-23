@@ -1,33 +1,82 @@
 /*
- * Tailwind v4 — infrastructure only (BearPad migration, step 1).
+ * Tailwind v4 — BearPad styling entry.
  *
- * Deliberately does NOT import the default entry (`@import "tailwindcss"`),
- * because that also pulls in preflight (@layer base), which:
- *   - resets margin/padding/border on EVERY element  (`*, ::before, ::after`)
- *   - sets `html { line-height: 1.5 }`
- *   - makes form controls `font: inherit` (BearPad's buttons are Arial 13.33px)
- *   - resets lists, headings, links, images, etc.
- * BearPad's existing CSS was written against browser defaults, so preflight
- * would visibly shift the layout before a single component is migrated.
+ * Preflight IS enabled (added once the per-component migration completed).
+ * It resets margin/padding/border on every element, sets `html { line-height: 1.5 }`,
+ * makes form controls `font: inherit`, and applies `box-sizing: border-box` globally.
+ * BearPad's old CSS was written against browser defaults, so each of those is a real
+ * shift; the affected elements pin their previous behaviour explicitly in the markup
+ * (box-content / leading-[normal] / explicit font sizes) and the result is verified by
+ * diffing computed styles + geometry before/after (see the migration notes).
  *
- * theme + utilities only:
- *   - theme      -> CSS custom properties; tree-shaken, emits only what is used
- *   - utilities  -> generated only for utility classes actually found in source,
- *                   so with no component migrated yet this compiles to nothing
- *
- * Net effect today: zero visual change, verified by comparing computed styles
- * before/after in the running app.
- *
- * WHEN THE PER-COMPONENT MIGRATION IS COMPLETE, add preflight back:
- *   @import "tailwindcss/preflight.css" layer(base);
- * ...and re-verify every surface, because it resets the defaults the old CSS
- * was written against.
+ * Layers, in order: theme -> base (preflight) -> components -> utilities.
+ * Utilities win over preflight, which is what makes the pins work.
  */
 @layer theme, base, components, utilities;
 
 @import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
 @import "tailwindcss/utilities.css" layer(utilities);
 
+/* ---------------------------------------------------------------------------
+ * Preflight pins.
+ *
+ * BearPad's pre-Tailwind CSS was authored against the browser's own defaults, and
+ * every surface was migrated and verified against them. Preflight replaces those
+ * defaults, and a measured before/after diff of 60 selectors across 5 surfaces
+ * showed exactly what moves. Every declaration below restores the pre-migration
+ * value rather than accepting the shift.
+ *
+ * All of it lives in @layer base, so a utility on the element (later layer) still
+ * wins: the pins only supply what the markup does not state explicitly.
+ * ------------------------------------------------------------------------- */
+@layer base {
+  /* `revert` is load-bearing: it rolls the property back to the UA stylesheet,
+     discarding preflight's author-origin declaration. That restores the exact
+     browser default the app was built on - on every engine. Hardcoding the values
+     instead (Arial 13.3333px, gray, 1px inset, 1px 6px, 2px) would only be correct
+     on Chromium; BearPad also ships on WKWebView and WebView2, whose control
+     defaults differ. */
+
+  /* preflight sets `html { line-height: 1.5 }`. The chrome was built on `normal`:
+     1.5 grew the menu bar 35->41px, the tab bar 29->35, context-menu rows 23->32
+     and every settings field. */
+  html {
+    line-height: revert;
+  }
+
+  /* preflight's `font: inherit` + zeroed control metrics replaced the browser's own
+     control font and padding. */
+  button,
+  input,
+  select,
+  textarea {
+    font: revert;
+    padding: revert;
+    margin: revert;
+  }
+
+  /* preflight resets `hr` to `border: 0 solid`. The browser's hr is a 1px inset
+     border in gray, which is what the context-menu separators were rendering. */
+  hr {
+    border: revert;
+    color: revert;
+  }
+
+  /* preflight's global `box-sizing: border-box`. Form controls already had it from
+     the UA stylesheet, so only these content-box elements actually changed size:
+     .about-sheet 406->340px, .sheet 422->420, .menu-dropdown 232->230,
+     .custom-context-menu 222->220, .title-bar 41->40, .status-bar 25->24.
+     Their children follow the corrected parent. */
+  .title-bar,
+  .status-bar,
+  .menu-dropdown,
+  .custom-context-menu,
+  .sheet,
+  .about-sheet {
+    box-sizing: revert;
+  }
+}
 /* ---------------------------------------------------------------------------
  * Design tokens: BearPad's existing palette variables exposed as Tailwind
  * utilities (bg-menu-bg, text-menu-text, border-menu-border, text-ui, ...).
