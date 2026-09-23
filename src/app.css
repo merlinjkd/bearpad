@@ -226,3 +226,29 @@ body {
   --sidebar-border: var(--menu-border);
   --sidebar-ring: #094771;
 }
+
+/* The settings modal is deliberately theme-invariant — its palette is hardcoded dark and
+ * does not follow the app theme. Scope the shadcn tokens to its sheet so components
+ * inside it keep that hardcoded palette instead of flipping to light mode with the app.
+ * These values are the same literals the modal's markup uses. */
+.sheet {
+  --background: #252526;
+  --foreground: #cccccc;
+  --card: #252526;
+  --card-foreground: #cccccc;
+  --popover: #252526;
+  --popover-foreground: #cccccc;
+  --primary: #094771;
+  --primary-foreground: #ffffff;
+  --secondary: #2d2d2d;
+  --secondary-foreground: #cccccc;
+  --muted: #2d2d2d;
+  --muted-foreground: #999999;
+  --accent: #3c3c3c;
+  --accent-foreground: #ffffff;
+  --destructive: #e81123;
+  --border: #3c3c3c;
+  --input: #3c3c3c;
+  --ring: #094771;
+  --radius: 0.375rem;
+}

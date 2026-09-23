@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { Slider } from "$lib/components/ui/slider/index.js";
+	import { Button } from "$lib/components/ui/button/index.js";
+
 	interface SettingsData {
 		theme: 'dark' | 'light' | 'system';
 		fontSize: number;
@@ -96,24 +99,28 @@
 					>Editor Font Size: {settings.fontSize}px</div
 				>
 				<div class="size-controls flex items-center gap-2">
-					<button
-						class="size-btn w-8 h-8 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[1em] cursor-pointer flex items-center justify-center hover:bg-[#3c3c3c]"
+					<Button
+						variant="secondary"
+						size="icon"
+						class="border-border"
 						onclick={() => onChange({ fontSize: Math.max(10, settings.fontSize - 1) })}
-						>–</button
+						>–</Button
 					>
-					<input
-						class="flex-1 accent-[#094771] h-1"
-						type="range"
-						min="10"
-						max="32"
-						step="1"
+					<Slider
+						type="single"
+						class="flex-1"
+						min={10}
+						max={32}
+						step={1}
 						value={settings.fontSize}
-						oninput={(e) => onChange({ fontSize: parseInt((e.target as HTMLInputElement).value) })}
+						onValueChange={(v) => onChange({ fontSize: v })}
 					/>
-					<button
-						class="size-btn w-8 h-8 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[1em] cursor-pointer flex items-center justify-center hover:bg-[#3c3c3c]"
+					<Button
+						variant="secondary"
+						size="icon"
+						class="border-border"
 						onclick={() => onChange({ fontSize: Math.min(32, settings.fontSize + 1) })}
-						>+</button
+						>+</Button
 					>
 				</div>
 			</div>
@@ -123,24 +130,28 @@
 					>Menu UI Font Size: {settings.uiFontSize}px</div
 				>
 				<div class="size-controls flex items-center gap-2">
-					<button
-						class="size-btn w-8 h-8 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[1em] cursor-pointer flex items-center justify-center hover:bg-[#3c3c3c]"
+					<Button
+						variant="secondary"
+						size="icon"
+						class="border-border"
 						onclick={() => onChange({ uiFontSize: Math.max(12, settings.uiFontSize - 1) })}
-						>–</button
+						>–</Button
 					>
-					<input
-						class="flex-1 accent-[#094771] h-1"
-						type="range"
-						min="12"
-						max="24"
-						step="1"
+					<Slider
+						type="single"
+						class="flex-1"
+						min={12}
+						max={24}
+						step={1}
 						value={settings.uiFontSize}
-						oninput={(e) => onChange({ uiFontSize: parseInt((e.target as HTMLInputElement).value) })}
+						onValueChange={(v) => onChange({ uiFontSize: v })}
 					/>
-					<button
-						class="size-btn w-8 h-8 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[1em] cursor-pointer flex items-center justify-center hover:bg-[#3c3c3c]"
+					<Button
+						variant="secondary"
+						size="icon"
+						class="border-border"
 						onclick={() => onChange({ uiFontSize: Math.min(24, settings.uiFontSize + 1) })}
-						>+</button
+						>+</Button
 					>
 				</div>
 			</div>
