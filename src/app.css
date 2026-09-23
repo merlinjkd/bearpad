@@ -18,6 +18,19 @@
 @import "tailwindcss/preflight.css" layer(base);
 @import "tailwindcss/utilities.css" layer(utilities);
 
+/* shadcn-svelte: the animation utilities its components use, plus its component base
+   styles. The CLI also adds `@import "@fontsource-variable/geist"` — deliberately NOT
+   included, because BearPad renders in the platform UI font (see --font-sans below);
+   pulling in Geist would change every surface's typography. */
+@import "tw-animate-css";
+@import "shadcn-svelte/tailwind.css";
+
+/* BearPad is DARK by default and switches to light via <body data-theme="light"> — the
+   inverse of shadcn's `.dark` class convention. Bind the `dark:` variant to BearPad's
+   own convention instead. `:where()` keeps it at zero specificity, so a dark: utility
+   can never outrank a plain utility by accident. */
+@custom-variant dark (&:where(body:not([data-theme="light"]), body:not([data-theme="light"]) *));
+
 /* ---------------------------------------------------------------------------
  * Preflight pins.
  *
@@ -76,6 +89,17 @@
   .about-sheet {
     box-sizing: revert;
   }
+
+  /* shadcn-svelte components draw bare `border` utilities and expect them to resolve to
+     the theme border colour. Explicit border-* colours in the markup are utilities too
+     (later layer) and still win, so this only fills the gap. The CLI also adds
+     `outline-ring/50` here; dropped, so focus outlines keep the appearance BearPad
+     already ships — components set their own focus-visible rings.
+     Verified as a no-op on every existing surface: every border utility in BearPad's
+     markup already pairs with an explicit colour. */
+  * {
+    @apply border-border;
+  }
 }
 /* ---------------------------------------------------------------------------
  * Design tokens: BearPad's existing palette variables exposed as Tailwind
@@ -103,4 +127,102 @@
   /* Interface font scale: one knob (--ui-font-size) drives menu bar, dropdowns,
      context menu, tab bar and the settings modal. */
   --text-ui: var(--ui-font-size, 16px);
+
+  /* shadcn-svelte. Names only — the VALUES live further down, mapped onto BearPad's own
+     palette so the two systems cannot drift apart. `--font-sans` is the platform UI
+     stack, NOT the preset's Geist webfont. */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* NOTE: do NOT define --radius-sm/md/lg/xl here. shadcn's preset ships a radius SCALE
+     (--radius-md: calc(var(--radius) * 0.8) ...) and overriding these names silently
+     redefines Tailwind's built-in scale — every existing `rounded-md` in BearPad's markup
+     changed from 6px to 4.8px when that block was present (measured: 10 elements, and the
+     only visible pixel change of the whole shadcn wiring). BearPad's markup and the
+     generated components both use the built-in scale, so leave it alone. `--radius`
+     itself stays in :root below for components that reference it directly. */
+}
+/*
+ ---break---
+ */
+:root {
+  /* Component corner radius. BearPad's own radii are 4px (buttons), 6px (context menu,
+     dialog buttons) and 10px (sheets/modals); 6px is the shared value, and the scale in
+     @theme above derives shadcn's sm/md/lg/xl from it. */
+  --radius: 0.375rem;
+}
+/*
+ ---break---
+ */
+/* shadcn-svelte token VALUES, mapped onto BearPad's palette rather than duplicated.
+ *
+ * Declared on <body>, not :root: BearPad's own custom properties (--menu-bg,
+ * --menu-text, ...) are declared on <body>, so a :root-level `var(--menu-bg)` would
+ * resolve where that property does not exist. From <body> every value below flips with
+ * the theme for free — dark is the default and body[data-theme="light"] overrides the
+ * --menu-* set — so components inherit BearPad's theme without a second palette.
+ * The four literals (#094771 accent, #ffffff on-accent, #a0a0a0 dimmed, #e81123
+ * destructive) are values BearPad already hardcodes in its own chrome. */
+body {
+  --background: var(--menu-bg);
+  --foreground: var(--menu-text);
+  --card: var(--menu-bg);
+  --card-foreground: var(--menu-text);
+  --popover: var(--menu-bg);
+  --popover-foreground: var(--menu-text);
+  --primary: #094771;
+  --primary-foreground: #ffffff;
+  --secondary: var(--menu-hover);
+  --secondary-foreground: var(--menu-text);
+  --muted: var(--menu-hover);
+  --muted-foreground: #a0a0a0;
+  --accent: var(--menu-hover);
+  --accent-foreground: var(--menu-text);
+  --destructive: #e81123;
+  --border: var(--menu-border);
+  --input: var(--menu-border);
+  --ring: #094771;
+  --chart-1: #094771;
+  --chart-2: #1a5a8a;
+  --chart-3: #a0a0a0;
+  --chart-4: #3c3c3c;
+  --chart-5: #F0F0F0;
+  --sidebar: var(--menu-bg);
+  --sidebar-foreground: var(--menu-text);
+  --sidebar-primary: #094771;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--menu-hover);
+  --sidebar-accent-foreground: var(--menu-text);
+  --sidebar-border: var(--menu-border);
+  --sidebar-ring: #094771;
 }
