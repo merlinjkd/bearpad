@@ -2,6 +2,7 @@
 	import { Slider } from "$lib/components/ui/slider/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import * as Select from "$lib/components/ui/select/index.js";
+	import * as ToggleGroup from "$lib/components/ui/toggle-group/index.js";
 
 	// The Select popups are portalled. Target the sheet so they inherit its scoped tokens
 	// (this modal is theme-invariant) rather than the body's theme-aware ones — otherwise
@@ -38,8 +39,14 @@
 		{ label: 'Cascadia Code', value: "'Cascadia Code', 'Cascadia Code PL', monospace" },
 		{ label: 'JetBrains Mono', value: "'JetBrains Mono', monospace" },
 		{ label: 'Monaco', value: "'Monaco', monospace" },
-		{ label: 'monospace', value: 'monospace' },
+		{ label: 'monospace', value: 'monospace' }
 	];
+
+	const THEME_OPTIONS = [
+		{ value: 'dark', label: 'Dark' },
+		{ value: 'light', label: 'Light' },
+		{ value: 'system', label: 'System' }
+	] as const;
 </script>
 
 <!-- All styling is Tailwind utilities (migration step 4c). The <style> block is
@@ -80,25 +87,29 @@
 		<div
 			class="body p-5 flex flex-col gap-5 overflow-y-auto flex-1 min-h-0 [scrollbar-width:thin] [scrollbar-color:#555_#252526] [&::-webkit-scrollbar]:w-[10px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#4a4a4a] [&::-webkit-scrollbar-thumb]:rounded-[5px] [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-[#252526] [&::-webkit-scrollbar-thumb:hover]:bg-[#5f5f5f]"
 		>
-			<div class="field flex flex-col gap-2" role="group" aria-label="Theme">
+			<div class="field flex flex-col gap-2">
 				<div class="radio-label text-[0.8125em] font-medium text-[#aaaaaa]">Theme</div>
-				<div class="radio-group flex rounded-md overflow-hidden border border-[#3c3c3c]">
-					<button
-						class="radio-btn flex-1 py-1.5 px-3 border-0 bg-[#2d2d2d] text-[#999] cursor-pointer text-[0.8125em] transition-[background,color] duration-150 not-last:border-r not-last:border-[#3c3c3c] {settings.theme === 'dark' ? 'bg-[#094771] text-white' : ''}"
-						onclick={() => onChange({ theme: 'dark' })}
-						>Dark</button
-					>
-					<button
-						class="radio-btn flex-1 py-1.5 px-3 border-0 bg-[#2d2d2d] text-[#999] cursor-pointer text-[0.8125em] transition-[background,color] duration-150 not-last:border-r not-last:border-[#3c3c3c] {settings.theme === 'light' ? 'bg-[#094771] text-white' : ''}"
-						onclick={() => onChange({ theme: 'light' })}
-						>Light</button
-					>
-					<button
-						class="radio-btn flex-1 py-1.5 px-3 border-0 bg-[#2d2d2d] text-[#999] cursor-pointer text-[0.8125em] transition-[background,color] duration-150 not-last:border-r not-last:border-[#3c3c3c] {settings.theme === 'system' ? 'bg-[#094771] text-white' : ''}"
-						onclick={() => onChange({ theme: 'system' })}
-						>System</button
-					>
-				</div>
+				<ToggleGroup.Root
+					type="single"
+					value={settings.theme}
+					onValueChange={(v) => {
+						// a single ToggleGroup lets you deselect the active item; the theme must
+						// always be one of the three, so ignore the empty value.
+						if (v) onChange({ theme: v as 'dark' | 'light' | 'system' });
+					}}
+					variant="outline"
+					spacing={0}
+					aria-label="Theme"
+					class="w-full overflow-hidden"
+				>
+					{#each THEME_OPTIONS as opt}
+						<ToggleGroup.Item
+							value={opt.value}
+							class="flex-1 bg-[#2d2d2d] text-[#999] text-[0.8125em] data-[state=on]:bg-[#094771] data-[state=on]:text-white"
+							>{opt.label}</ToggleGroup.Item
+						>
+					{/each}
+				</ToggleGroup.Root>
 			</div>
 
 			<div class="field flex flex-col gap-2" role="group" aria-label="Editor Font Size">
