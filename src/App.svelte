@@ -745,11 +745,10 @@ import {
 		</button>
 	</div>
 
-	<div class="tab-bar" role="tablist">
+	<div class="tab-bar flex items-stretch bg-menu-bg text-menu-text border-b border-menu-border text-ui select-none shrink-0 overflow-x-auto" role="tablist">
 		{#each tabs as tab (tab.id)}
 			<div
-				class="tab"
-				class:active={tab.id === activeTabId}
+				class="tab flex items-center gap-1.5 py-[5px] px-2.5 border-r border-menu-border cursor-default max-w-[200px] hover:bg-menu-hover {tab.id === activeTabId ? 'bg-menu-hover shadow-[inset_0_-2px_0_#094771]' : ''}"
 				role="tab"
 				tabindex="-1"
 				aria-selected={tab.id === activeTabId}
@@ -765,12 +764,12 @@ import {
 					}
 				}}
 			>
-				<span class="tab-title">{fileName(tab)}</span>
+				<span class="tab-title whitespace-nowrap overflow-hidden text-ellipsis">{fileName(tab)}</span>
 				{#if dirtyMap[tab.id]}
-					<span class="tab-dirty" title="unsaved">●</span>
+					<span class="tab-dirty text-[#d4d4d4] text-[0.625em]" title="unsaved">●</span>
 				{/if}
 				<button
-					class="tab-close"
+					class="tab-close bg-transparent border-0 text-menu-text cursor-pointer text-[0.85em] leading-none py-px px-1 rounded-[3px] hover:bg-[#094771] hover:text-white"
 					aria-label="Close tab"
 					onclick={(e) => {
 						e.stopPropagation();
@@ -780,7 +779,7 @@ import {
 			</div>
 		{/each}
 		<button
-			class="tab-new"
+			class="tab-new self-center my-0 mx-1.5 py-0 px-2 border-0 bg-transparent text-menu-text text-[1.1em] leading-none cursor-pointer hover:text-white hover:bg-menu-hover hover:rounded-[4px]"
 			aria-label="New tab"
 			title="New tab"
 			onclick={() => newFile()}
@@ -1054,72 +1053,11 @@ import {
 	   markup. Deleting these rules is REQUIRED, not cosmetic: Svelte scopes component
 	   selectors to two classes (.menu-label.svelte-xxxxx), so an old rule outranks a
 	   single-class utility on specificity and the utilities would silently do nothing. */
-	.tab-bar {
-		display: flex;
-		align-items: stretch;
-		background: var(--menu-bg);
-		color: var(--menu-text);
-		border-bottom: 1px solid var(--menu-border);
-		font-size: var(--ui-font-size, 16px);
-		user-select: none;
-		flex-shrink: 0;
-		overflow-x: auto;
-	}
-	.tab {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		padding: 5px 10px;
-		border-right: 1px solid var(--menu-border);
-		cursor: default;
-		max-width: 200px;
-	}
-	.tab:hover {
-		background: var(--menu-hover);
-	}
-	.tab.active {
-		background: var(--menu-hover);
-		box-shadow: inset 0 -2px 0 #094771;
-	}
-	.tab-new {
-		align-self: center;
-		margin: 0 6px;
-		padding: 0 8px;
-		border: none;
-		background: transparent;
-		color: var(--menu-text);
-		font-size: 1.1em;
-		line-height: 1;
-		cursor: pointer;
-	}
-	.tab-new:hover {
-		color: #ffffff;
-		background: var(--menu-hover);
-		border-radius: 4px;
-	}
-	.tab-title {
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.tab-dirty {
-		color: #d4d4d4;
-		font-size: 0.625em;
-	}
-	.tab-close {
-		background: none;
-		border: none;
-		color: var(--menu-text);
-		cursor: pointer;
-		font-size: 0.85em;
-		line-height: 1;
-		padding: 1px 4px;
-		border-radius: 3px;
-	}
-	.tab-close:hover {
-		background: #094771;
-		color: #ffffff;
-	}
+	/* .tab-bar / .tab / .tab-new / .tab-title / .tab-dirty / .tab-close now use
+	   Tailwind utilities on the markup; the rules had to be DELETED (a scoped rule
+	   outranks a single-class utility on specificity, so leaving them would silently
+	   defeat every utility). .tab-pane below is deliberately NOT migrated: it is the
+	   editor pane wrapper, a different surface. */
 	.tab-pane {
 		height: 100%;
 	}
