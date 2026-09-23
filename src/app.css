@@ -27,3 +27,31 @@
 
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
+
+/* ---------------------------------------------------------------------------
+ * Design tokens: BearPad's existing palette variables exposed as Tailwind
+ * utilities (bg-menu-bg, text-menu-text, border-menu-border, text-ui, ...).
+ *
+ * `inline` is load-bearing. It makes each generated utility emit the VALUE
+ * (`background-color: var(--menu-bg)`) instead of a reference to a
+ * `--color-menu-bg` property declared on :root. BearPad defines its palette on
+ * body[data-theme] (and overrides it on body[data-theme="light"]), so a
+ * :root-level reference would resolve in the wrong context and break light/dark
+ * switching. With `inline`, var() is resolved in the consuming element's own
+ * context, so theming keeps working exactly as before.
+ *
+ * These are the names to use when migrating the remaining surfaces; do not
+ * hardcode hex values in markup.
+ * ------------------------------------------------------------------------- */
+@theme inline {
+  --color-menu-bg: var(--menu-bg);
+  --color-menu-text: var(--menu-text);
+  --color-menu-hover: var(--menu-hover);
+  --color-menu-border: var(--menu-border);
+  --color-menu-sep: var(--menu-sep);
+  --color-title-bg: var(--title-bg);
+  --color-title-text: var(--title-text);
+  /* Interface font scale: one knob (--ui-font-size) drives menu bar, dropdowns,
+     context menu, tab bar and the settings modal. */
+  --text-ui: var(--ui-font-size, 16px);
+}

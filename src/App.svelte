@@ -676,11 +676,14 @@ import {
 			{#if !isMac}{@render windowControls()}{/if}
 		</div>
 	</div>
-	<div class="menu-bar" role="menubar">
+	<div class="menu-bar flex items-stretch bg-menu-bg text-menu-text border-b border-menu-border select-none relative z-[1000] shrink-0" role="menubar">
 		{#each menus as menu, i (menu.label)}
+			<!-- Styling lives in utilities now; the `open` state is expressed as a class
+			     on the item so hover and open share one background, and the `menu-bar`
+			     class is retained because App.svelte's document click handler does
+			     .closest('.menu-bar') to decide whether to close an open menu. -->
 			<div
-				class="menu-item"
-				class:open={openMenu === i}
+				class="menu-item group relative {openMenu === i ? 'bg-menu-hover' : ''} hover:bg-menu-hover"
 				role="menuitem"
 				tabindex="-1"
 				onmouseenter={() => (openMenu !== null ? (openMenu = i) : null)}
@@ -696,17 +699,16 @@ import {
 					}
 				}}
 			>
-				<span class="menu-label">{menu.label}</span>
+				<span class="menu-label block px-3.5 py-2 text-ui cursor-default">{menu.label}</span>
 				{#if openMenu === i}
-					<div class="menu-dropdown" role="menu">
+					<div class="menu-dropdown absolute top-full left-0 min-w-[230px] bg-menu-bg border border-menu-border shadow-[0_6px_16px_rgba(0,0,0,0.4)] py-1" role="menu">
 						{#each menu.items as item}
 							{@const disabled = typeof item.disabled === 'function' ? item.disabled() : item.disabled}
 							{#if item.separator}
-								<div class="menu-sep"></div>
+								<div class="menu-sep h-px bg-menu-sep my-1 mx-2"></div>
 							{:else}
 								<button
-									class="menu-action"
-									class:menu-disabled={disabled}
+									class="menu-action flex items-center gap-2.5 w-full text-left py-[5px] px-4 text-ui bg-transparent border-0 text-menu-text cursor-default hover:bg-[#094771] hover:text-white disabled:opacity-40 disabled:cursor-default disabled:hover:bg-transparent disabled:hover:text-menu-text"
 									role="menuitem"
 									disabled={disabled}
 									onclick={(e) => {
@@ -717,7 +719,7 @@ import {
 									}}
 								>
 									{#if item.icon}
-										<span class="menu-action-icon">
+										<span class="menu-action-icon inline-flex items-center justify-center shrink-0 opacity-90">
 											<svelte:component this={item.icon} size={15} strokeWidth={1.75} />
 										</span>
 									{/if}
@@ -729,9 +731,9 @@ import {
 				{/if}
 			</div>
 		{/each}
-		<div class="menu-spacer"></div>
+		<div class="menu-spacer flex-1"></div>
 		<button
-			class="menu-gear"
+			class="menu-gear flex items-center justify-center w-[34px] mr-1 border-0 rounded-md bg-transparent text-menu-text cursor-pointer hover:bg-menu-hover"
 			aria-label="Settings"
 			title="Settings"
 			onclick={() => openSettings()}
@@ -889,17 +891,9 @@ import {
 		flex-direction: column;
 		height: 100vh;
 	}
-	.menu-bar {
-		display: flex;
-		align-items: stretch;
-		background: var(--menu-bg);
-		color: var(--menu-text);
-		border-bottom: 1px solid var(--menu-border);
-		user-select: none;
-		position: relative;
-		z-index: 1000;
-		flex-shrink: 0;
-	}
+	/* Menu-bar styling now lives in Tailwind utilities on the markup. The `menu-bar`
+	   class is deliberately retained as a JS hook: App.svelte's document click handler
+	   uses .closest('.menu-bar') to decide whether to close an open menu. */
 	.status-bar {
 		display: flex;
 		align-items: center;
@@ -1055,85 +1049,11 @@ import {
 	.about-ok:hover {
 		background: #0a5a8f;
 	}
-	.menu-spacer {
-		flex: 1;
-	}
-	.menu-gear {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 34px;
-		margin-right: 4px;
-		border: none;
-		border-radius: 6px;
-		background: transparent;
-		color: var(--menu-text);
-		cursor: pointer;
-	}
-	.menu-gear:hover {
-		background: var(--menu-hover);
-	}
-	.menu-item {
-		position: relative;
-	}
-	.menu-label {
-		display: block;
-		padding: 8px 14px;
-		font-size: var(--ui-font-size, 16px);
-		cursor: default;
-	}
-	.menu-item.open .menu-label,
-	.menu-item:hover .menu-label {
-		background: var(--menu-hover);
-	}
-	.menu-dropdown {
-		position: absolute;
-		top: 100%;
-		left: 0;
-		min-width: 230px;
-		background: var(--menu-bg);
-		border: 1px solid var(--menu-border);
-		box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-		padding: 4px 0;
-	}
-	.menu-action {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		width: 100%;
-		text-align: left;
-		padding: 5px 16px;
-		font-size: var(--ui-font-size, 16px);
-		background: none;
-		border: none;
-		color: var(--menu-text);
-		cursor: default;
-	}
-	.menu-action-icon {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-		opacity: 0.9;
-	}
-	.menu-action:hover {
-		background: #094771;
-		color: #ffffff;
-	}
-	.menu-action.menu-disabled,
-	.menu-action:disabled {
-		opacity: 0.4;
-		cursor: default;
-	}
-	.menu-action:disabled:hover {
-		background: none;
-		color: var(--menu-text);
-	}
-	.menu-sep {
-		height: 1px;
-		background: var(--menu-sep);
-		margin: 4px 8px;
-	}
+	/* .menu-spacer / .menu-gear / .menu-item / .menu-label / .menu-dropdown /
+	   .menu-action / .menu-action-icon / .menu-sep now use Tailwind utilities on the
+	   markup. Deleting these rules is REQUIRED, not cosmetic: Svelte scopes component
+	   selectors to two classes (.menu-label.svelte-xxxxx), so an old rule outranks a
+	   single-class utility on specificity and the utilities would silently do nothing. */
 	.tab-bar {
 		display: flex;
 		align-items: stretch;
