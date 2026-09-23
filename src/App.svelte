@@ -645,34 +645,34 @@ import {
 </script>
 
 {#snippet windowControls()}
-	<div class="title-bar-controls">
-		<button class="tb-btn" aria-label="Minimize" onclick={() => getCurrentWindow().minimize()}>
-			<span class="tb-glyph">─</span>
+	<div class="title-bar-controls flex gap-0.5 [-webkit-app-region:no-drag]">
+		<button class="tb-btn w-10 h-[30px] border-0 bg-transparent text-title-text text-[13px] cursor-pointer flex items-center justify-center rounded hover:bg-menu-hover" aria-label="Minimize" onclick={() => getCurrentWindow().minimize()}>
+			<span class="tb-glyph text-[13px] leading-none">─</span>
 		</button>
-		<button class="tb-btn" aria-label="Maximize" onclick={() => getCurrentWindow().toggleMaximize()}>
-			<span class="tb-glyph">□</span>
+		<button class="tb-btn w-10 h-[30px] border-0 bg-transparent text-title-text text-[13px] cursor-pointer flex items-center justify-center rounded hover:bg-menu-hover" aria-label="Maximize" onclick={() => getCurrentWindow().toggleMaximize()}>
+			<span class="tb-glyph text-[13px] leading-none">□</span>
 		</button>
-		<button class="tb-btn tb-close" aria-label="Close" onclick={() => getCurrentWindow().close()}>
-			<span class="tb-glyph">✕</span>
+		<button class="tb-btn tb-close w-10 h-[30px] border-0 bg-transparent text-title-text text-[13px] cursor-pointer flex items-center justify-center rounded hover:bg-[#e81123] hover:text-white" aria-label="Close" onclick={() => getCurrentWindow().close()}>
+			<span class="tb-glyph text-[13px] leading-none">✕</span>
 		</button>
 	</div>
 {/snippet}
 
 <div class="app-root" data-theme={resolvedTheme} style="--ui-font-size:{uiFontSize}px">
-	<div class="title-bar" data-tauri-drag-region>
+	<div class="title-bar flex items-center gap-2.5 h-10 px-3 bg-title-bg border-b border-menu-border select-none shrink-0 [-webkit-app-region:drag]" data-tauri-drag-region>
 		<!-- Three semantic slots: leading controls / content / trailing controls. Which
 		     slot holds the controls is the ONLY platform difference, and it is structural
 		     rather than a `flex-direction: row-reverse` hack, so the icon and title never
 		     move. Controls are hand-drawn on every OS - no macOS overlay, no native
 		     traffic lights. See the cross-platform UI standard in the tauri-desktop-app skill. -->
-		<div class="titlebar-slot" data-tauri-drag-region>
+		<div class="titlebar-slot flex items-center gap-0.5" data-tauri-drag-region>
 			{#if isMac}{@render windowControls()}{/if}
 		</div>
-		<div class="titlebar-content" data-tauri-drag-region>
-			<img class="title-bar-icon" src={bearpawIcon} alt="" draggable="false" />
-			<span class="title-bar-title" data-tauri-drag-region>BearPad - {fileName(activeTab())}</span>
+		<div class="titlebar-content flex items-center gap-2.5 flex-1 min-w-0" data-tauri-drag-region>
+			<img class="title-bar-icon w-6 h-6 rounded-[5px]" src={bearpawIcon} alt="" draggable="false" />
+			<span class="title-bar-title text-[16px] font-semibold text-title-text" data-tauri-drag-region>BearPad - {fileName(activeTab())}</span>
 		</div>
-		<div class="titlebar-slot" data-tauri-drag-region>
+		<div class="titlebar-slot flex items-center gap-0.5" data-tauri-drag-region>
 			{#if !isMac}{@render windowControls()}{/if}
 		</div>
 	</div>
@@ -810,15 +810,15 @@ import {
 		{/each}
 	</div>
 
-	<div class="status-bar" role="status">
-		<span class="status-path" title={activeTab()?.path ?? ''}>
+	<div class="status-bar flex items-center justify-between gap-3 h-6 px-2.5 bg-menu-bg text-menu-text border-t border-menu-border text-[0.8125em] font-[-apple-system,BlinkMacSystemFont,'Segoe_UI',system-ui,sans-serif] select-none shrink-0" role="status">
+		<span class="status-path overflow-hidden text-ellipsis whitespace-nowrap opacity-85" title={activeTab()?.path ?? ''}>
 			{fileName(activeTab())}
 		</span>
-		<span class="status-right">
+		<span class="status-right flex items-center gap-3.5 shrink-0">
 			{#if status.selCount > 0}
-				<span class="status-item">{status.selCount} selected</span>
+				<span class="status-item whitespace-nowrap">{status.selCount} selected</span>
 			{/if}
-			<span class="status-item">Ln {status.line}, Col {status.col}</span>
+			<span class="status-item whitespace-nowrap">Ln {status.line}, Col {status.col}</span>
 		</span>
 	</div>
 
@@ -893,103 +893,17 @@ import {
 	/* Menu-bar styling now lives in Tailwind utilities on the markup. The `menu-bar`
 	   class is deliberately retained as a JS hook: App.svelte's document click handler
 	   uses .closest('.menu-bar') to decide whether to close an open menu. */
-	.status-bar {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
-		height: 24px;
-		padding: 0 10px;
-		background: var(--menu-bg);
-		color: var(--menu-text);
-		border-top: 1px solid var(--menu-border);
-		font-size: 0.8125em;
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-		user-select: none;
-		flex-shrink: 0;
-	}
-	.status-path {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		opacity: 0.85;
-	}
-	.status-right {
-		display: flex;
-		align-items: center;
-		gap: 14px;
-		flex-shrink: 0;
-	}
-	.status-item {
-		white-space: nowrap;
-	}
-	.title-bar {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		height: 40px;
-		padding: 0 12px;
-		background: var(--title-bg);
-		border-bottom: 1px solid var(--menu-border);
-		user-select: none;
-		flex-shrink: 0;
-		-webkit-app-region: drag;
-	}
+	/* .status-bar / .status-path / .status-right / .status-item now use Tailwind
+	   utilities on the markup. */
+	/* .title-bar / .titlebar-slot / .titlebar-content / .title-bar-icon /
+	   .title-bar-title / .title-bar-controls / .tb-btn / .tb-close / .tb-glyph now use
+	   Tailwind utilities on the markup. The drag regions use the arbitrary property
+	   [-webkit-app-region:drag] / [-webkit-app-region:no-drag] (no utility exists for
+	   a vendor-prefixed property). The data-tauri-drag-region attributes are unchanged. */
 	/* Three semantic slots. The content slot absorbs the free space, which pushes the
 	   TRAILING controls slot to the far edge on Windows/Linux; on macOS the LEADING slot
 	   holds the controls instead and the content simply follows it. No row-reverse, so
 	   the icon and title never get relocated. */
-	.titlebar-slot {
-		display: flex;
-		align-items: center;
-		gap: 2px;
-	}
-	.titlebar-content {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		flex: 1;
-		min-width: 0;
-	}
-	.title-bar-icon {
-		width: 24px;
-		height: 24px;
-		border-radius: 5px;
-	}
-	.title-bar-title {
-		font-size: 16px;
-		font-weight: 600;
-		color: var(--title-text);
-	}
-	.title-bar-controls {
-		display: flex;
-		gap: 2px;
-		-webkit-app-region: no-drag;
-	}
-	.tb-btn {
-		width: 40px;
-		height: 30px;
-		border: none;
-		background: transparent;
-		color: var(--title-text);
-		font-size: 13px;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		border-radius: 4px;
-	}
-	.tb-btn:hover {
-		background: var(--menu-hover);
-	}
-	.tb-close:hover {
-		background: #e81123;
-		color: #ffffff;
-	}
-	.tb-glyph {
-		font-size: 13px;
-		line-height: 1;
-	}
 	/* .about-overlay / .about-sheet / .about-icon / .about-name / .about-version /
 	   .about-desc / .about-ok now use Tailwind utilities on the markup. Unlike the
 	   settings modal, this dialog IS theme-aware (it reads --menu-bg / --menu-border /
