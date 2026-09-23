@@ -33,40 +33,76 @@
 	];
 </script>
 
-<div class="overlay" onclick={onClose} role="presentation">
-	<div class="sheet" onclick={(e) => e.stopPropagation()} onkeydown={(e) => { if (e.key === 'Escape') onClose(); }} role="dialog" aria-label="Settings" tabindex="-1">
-		<div class="header">
-			<h2>Settings</h2>
-			<button class="close-btn" onclick={onClose}>✕</button>
+<!-- All styling is Tailwind utilities (migration step 4c). The <style> block is
+     gone; its rules had to be deleted rather than superseded: Svelte scopes
+     component selectors to two classes, so a surviving rule would outrank a
+     single-class utility on specificity and silently defeat it. Colors are
+     intentionally the same hardcoded values as before — this modal was already
+     theme-invariant (no vars), and the migration must not change appearance.
+
+     Escape closes via the sheet's keydown; the overlay's onclick is the
+     click-outside close. Both preserved verbatim. -->
+
+<div
+	class="overlay fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center"
+	onclick={onClose}
+	role="presentation"
+>
+	<div
+		class="sheet bg-[#252526] border border-[#3c3c3c] rounded-[10px] min-w-[420px] max-w-[500px] max-h-[90vh] flex flex-col shadow-[0_16px_48px_rgba(0,0,0,0.6)] font-[-apple-system,BlinkMacSystemFont,'Segoe_UI',system-ui,sans-serif] text-[#cccccc] text-ui"
+		onclick={(e) => e.stopPropagation()}
+		onkeydown={(e) => {
+			if (e.key === 'Escape') onClose();
+		}}
+		role="dialog"
+		aria-label="Settings"
+		tabindex="-1"
+	>
+		<div class="header flex items-center justify-between px-5 py-4 border-b border-[#3c3c3c]">
+			<h2 class="m-0 text-[0.9375em] font-semibold text-white">Settings</h2>
+			<button
+				class="close-btn bg-transparent border-0 text-[#888] text-[1em] cursor-pointer py-0.5 px-1.5 rounded hover:bg-[#3c3c3c] hover:text-white"
+				onclick={onClose}
+				>✕</button
+			>
 		</div>
 
-		<div class="body">
-			<div class="field" role="group" aria-label="Theme">
-				<div class="radio-label">Theme</div>
-				<div class="radio-group">
+		<div
+			class="body p-5 flex flex-col gap-5 overflow-y-auto flex-1 min-h-0 [scrollbar-width:thin] [scrollbar-color:#555_#252526] [&::-webkit-scrollbar]:w-[10px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#4a4a4a] [&::-webkit-scrollbar-thumb]:rounded-[5px] [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-[#252526] [&::-webkit-scrollbar-thumb:hover]:bg-[#5f5f5f]"
+		>
+			<div class="field flex flex-col gap-2" role="group" aria-label="Theme">
+				<div class="radio-label text-[0.8125em] font-medium text-[#aaaaaa]">Theme</div>
+				<div class="radio-group flex rounded-md overflow-hidden border border-[#3c3c3c]">
 					<button
-						class="radio-btn"
-						class:active={settings.theme === 'dark'}
+						class="radio-btn flex-1 py-1.5 px-3 border-0 bg-[#2d2d2d] text-[#999] cursor-pointer text-[0.8125em] transition-[background,color] duration-150 not-last:border-r not-last:border-[#3c3c3c] {settings.theme === 'dark' ? 'bg-[#094771] text-white' : ''}"
 						onclick={() => onChange({ theme: 'dark' })}
-					>Dark</button>
+						>Dark</button
+					>
 					<button
-						class="radio-btn"
-						class:active={settings.theme === 'light'}
+						class="radio-btn flex-1 py-1.5 px-3 border-0 bg-[#2d2d2d] text-[#999] cursor-pointer text-[0.8125em] transition-[background,color] duration-150 not-last:border-r not-last:border-[#3c3c3c] {settings.theme === 'light' ? 'bg-[#094771] text-white' : ''}"
 						onclick={() => onChange({ theme: 'light' })}
-					>Light</button>
+						>Light</button
+					>
 					<button
-						class="radio-btn"
-						class:active={settings.theme === 'system'}
+						class="radio-btn flex-1 py-1.5 px-3 border-0 bg-[#2d2d2d] text-[#999] cursor-pointer text-[0.8125em] transition-[background,color] duration-150 not-last:border-r not-last:border-[#3c3c3c] {settings.theme === 'system' ? 'bg-[#094771] text-white' : ''}"
 						onclick={() => onChange({ theme: 'system' })}
-					>System</button>
+						>System</button
+					>
 				</div>
 			</div>
 
-			<div class="field" role="group" aria-label="Editor Font Size">
-				<div class="radio-label">Editor Font Size: {settings.fontSize}px</div>
-				<div class="size-controls">
-					<button class="size-btn" onclick={() => onChange({ fontSize: Math.max(10, settings.fontSize - 1) })}>–</button>
+			<div class="field flex flex-col gap-2" role="group" aria-label="Editor Font Size">
+				<div class="radio-label text-[0.8125em] font-medium text-[#aaaaaa]"
+					>Editor Font Size: {settings.fontSize}px</div
+				>
+				<div class="size-controls flex items-center gap-2">
+					<button
+						class="size-btn w-8 h-8 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[1em] cursor-pointer flex items-center justify-center hover:bg-[#3c3c3c]"
+						onclick={() => onChange({ fontSize: Math.max(10, settings.fontSize - 1) })}
+						>–</button
+					>
 					<input
+						class="flex-1 accent-[#094771] h-1"
 						type="range"
 						min="10"
 						max="32"
@@ -74,15 +110,26 @@
 						value={settings.fontSize}
 						oninput={(e) => onChange({ fontSize: parseInt((e.target as HTMLInputElement).value) })}
 					/>
-					<button class="size-btn" onclick={() => onChange({ fontSize: Math.min(32, settings.fontSize + 1) })}>+</button>
+					<button
+						class="size-btn w-8 h-8 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[1em] cursor-pointer flex items-center justify-center hover:bg-[#3c3c3c]"
+						onclick={() => onChange({ fontSize: Math.min(32, settings.fontSize + 1) })}
+						>+</button
+					>
 				</div>
 			</div>
 
-			<div class="field" role="group" aria-label="Menu UI Font Size">
-				<div class="radio-label">Menu UI Font Size: {settings.uiFontSize}px</div>
-				<div class="size-controls">
-					<button class="size-btn" onclick={() => onChange({ uiFontSize: Math.max(12, settings.uiFontSize - 1) })}>–</button>
+			<div class="field flex flex-col gap-2" role="group" aria-label="Menu UI Font Size">
+				<div class="radio-label text-[0.8125em] font-medium text-[#aaaaaa]"
+					>Menu UI Font Size: {settings.uiFontSize}px</div
+				>
+				<div class="size-controls flex items-center gap-2">
+					<button
+						class="size-btn w-8 h-8 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[1em] cursor-pointer flex items-center justify-center hover:bg-[#3c3c3c]"
+						onclick={() => onChange({ uiFontSize: Math.max(12, settings.uiFontSize - 1) })}
+						>–</button
+					>
 					<input
+						class="flex-1 accent-[#094771] h-1"
 						type="range"
 						min="12"
 						max="24"
@@ -90,13 +137,20 @@
 						value={settings.uiFontSize}
 						oninput={(e) => onChange({ uiFontSize: parseInt((e.target as HTMLInputElement).value) })}
 					/>
-					<button class="size-btn" onclick={() => onChange({ uiFontSize: Math.min(24, settings.uiFontSize + 1) })}>+</button>
+					<button
+						class="size-btn w-8 h-8 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[1em] cursor-pointer flex items-center justify-center hover:bg-[#3c3c3c]"
+						onclick={() => onChange({ uiFontSize: Math.min(24, settings.uiFontSize + 1) })}
+						>+</button
+					>
 				</div>
 			</div>
 
-			<div class="field">
-				<label for="font-family-select">Font Family</label>
+			<div class="field flex flex-col gap-2">
+				<label class="text-[0.8125em] font-medium text-[#aaaaaa]" for="font-family-select"
+					>Font Family</label
+				>
 				<select
+					class="py-1.5 px-2.5 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[0.8125em]"
 					id="font-family-select"
 					value={settings.fontFamily}
 					onchange={(e) => onChange({ fontFamily: (e.target as HTMLSelectElement).value })}
@@ -107,9 +161,12 @@
 				</select>
 			</div>
 
-			<div class="field">
-				<label for="word-wrap-select">Word Wrap</label>
+			<div class="field flex flex-col gap-2">
+				<label class="text-[0.8125em] font-medium text-[#aaaaaa]" for="word-wrap-select"
+					>Word Wrap</label
+				>
 				<select
+					class="py-1.5 px-2.5 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[0.8125em]"
 					id="word-wrap-select"
 					value={settings.wordWrap ? 'on' : 'off'}
 					onchange={(e) =>
@@ -120,9 +177,12 @@
 				</select>
 			</div>
 
-			<div class="field">
-				<label for="spellcheck-select">Spell Check</label>
+			<div class="field flex flex-col gap-2">
+				<label class="text-[0.8125em] font-medium text-[#aaaaaa]" for="spellcheck-select"
+					>Spell Check</label
+				>
 				<select
+					class="py-1.5 px-2.5 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[0.8125em]"
 					id="spellcheck-select"
 					value={settings.spellcheck ? 'on' : 'off'}
 					onchange={(e) =>
@@ -133,9 +193,12 @@
 				</select>
 			</div>
 
-			<div class="field">
-				<label for="spell-lang-select">Spell Check Language</label>
+			<div class="field flex flex-col gap-2">
+				<label class="text-[0.8125em] font-medium text-[#aaaaaa]" for="spell-lang-select"
+					>Spell Check Language</label
+				>
 				<select
+					class="py-1.5 px-2.5 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[0.8125em]"
 					id="spell-lang-select"
 					value={settings.spellLang ?? 'en_US'}
 					onchange={(e) => onChange({ spellLang: (e.target as HTMLSelectElement).value })}
@@ -148,9 +211,12 @@
 				</select>
 			</div>
 
-			<div class="field">
-				<label for="cursor-blink-select">Blinking Cursor</label>
+			<div class="field flex flex-col gap-2">
+				<label class="text-[0.8125em] font-medium text-[#aaaaaa]" for="cursor-blink-select"
+					>Blinking Cursor</label
+				>
 				<select
+					class="py-1.5 px-2.5 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[0.8125em]"
 					id="cursor-blink-select"
 					value={settings.cursorBlink ? 'on' : 'off'}
 					onchange={(e) => onChange({ cursorBlink: (e.target as HTMLSelectElement).value === 'on' })}
@@ -160,22 +226,32 @@
 				</select>
 			</div>
 
-			<div class="field">
-				<label for="text-color-input">Text Color (blank = theme default)</label>
-				<div class="color-row">
+			<div class="field flex flex-col gap-2">
+				<label class="text-[0.8125em] font-medium text-[#aaaaaa]" for="text-color-input"
+					>Text Color (blank = theme default)</label
+				>
+				<div class="color-row flex items-center gap-2">
 					<input
+						class="w-[44px] h-[28px] p-0.5 border border-[#3c3c3c] rounded-md bg-[#2d2d2d] cursor-pointer"
 						id="text-color-input"
 						type="color"
 						value={settings.textColor || '#d4d4d4'}
 						onchange={(e) => onChange({ textColor: (e.target as HTMLInputElement).value })}
 					/>
-					<button class="color-reset" onclick={() => onChange({ textColor: '' })}>Reset</button>
+					<button
+						class="color-reset py-1 px-3 border border-[#3c3c3c] rounded-md bg-[#2d2d2d] text-[#cccccc] text-[0.8125em] cursor-pointer hover:bg-[#3c3c3c]"
+						onclick={() => onChange({ textColor: '' })}
+						>Reset</button
+					>
 				</div>
 			</div>
 
-			<div class="field">
-				<label for="default-format-select">Default File Format</label>
+			<div class="field flex flex-col gap-2">
+				<label class="text-[0.8125em] font-medium text-[#aaaaaa]" for="default-format-select"
+					>Default File Format</label
+				>
 				<select
+					class="py-1.5 px-2.5 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[0.8125em]"
 					id="default-format-select"
 					value={settings.defaultFormat || 'txt'}
 					onchange={(e) => onChange({ defaultFormat: (e.target as HTMLSelectElement).value as 'txt' | 'md' })}
@@ -186,199 +262,12 @@
 			</div>
 		</div>
 
-		<div class="footer">
-			<button class="action-btn" onclick={onClose}>Done</button>
+		<div class="footer px-5 py-3 border-t border-[#3c3c3c] flex justify-end shrink-0">
+			<button
+				class="action-btn py-1.5 px-5 rounded-md border-0 bg-[#094771] text-white text-[0.8125em] cursor-pointer hover:bg-[#1a5a8a]"
+				onclick={onClose}
+				>Done</button
+			>
 		</div>
 	</div>
 </div>
-
-<style>
-	.overlay {
-		position: fixed;
-		inset: 0;
-		z-index: 9999;
-		background: rgba(0, 0, 0, 0.5);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	.sheet {
-		background: #252526;
-		border: 1px solid #3c3c3c;
-		border-radius: 10px;
-		min-width: 420px;
-		max-width: 500px;
-		max-height: 90vh;
-		display: flex;
-		flex-direction: column;
-		box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-		color: #cccccc;
-		font-size: var(--ui-font-size, 16px);
-	}
-	.header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 16px 20px;
-		border-bottom: 1px solid #3c3c3c;
-	}
-	.header h2 {
-		margin: 0;
-		font-size: 0.9375em;
-		font-weight: 600;
-		color: #ffffff;
-	}
-	.close-btn {
-		background: none;
-		border: none;
-		color: #888;
-		font-size: 1em;
-		cursor: pointer;
-		padding: 2px 6px;
-		border-radius: 4px;
-	}
-	.close-btn:hover {
-		background: #3c3c3c;
-		color: #fff;
-	}
-	.body {
-		padding: 20px;
-		display: flex;
-		flex-direction: column;
-		gap: 20px;
-		overflow-y: auto;
-		flex: 1;
-		min-height: 0;
-		scrollbar-width: thin;
-		scrollbar-color: #555 #252526;
-	}
-	.body::-webkit-scrollbar {
-		width: 10px;
-	}
-	.body::-webkit-scrollbar-track {
-		background: transparent;
-	}
-	.body::-webkit-scrollbar-thumb {
-		background: #4a4a4a;
-		border-radius: 5px;
-		border: 2px solid #252526;
-	}
-	.body::-webkit-scrollbar-thumb:hover {
-		background: #5f5f5f;
-	}
-	.field {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-	.field label,
-	.radio-label {
-		font-size: 0.8125em;
-		font-weight: 500;
-		color: #aaaaaa;
-	}
-	.radio-group {
-		display: flex;
-		gap: 0;
-		border-radius: 6px;
-		overflow: hidden;
-		border: 1px solid #3c3c3c;
-	}
-	.radio-btn {
-		flex: 1;
-		padding: 6px 12px;
-		border: none;
-		background: #2d2d2d;
-		color: #999;
-		cursor: pointer;
-		font-size: 0.8125em;
-		transition: background 0.15s, color 0.15s;
-	}
-	.radio-btn:not(:last-child) {
-		border-right: 1px solid #3c3c3c;
-	}
-	.radio-btn.active {
-		background: #094771;
-		color: #ffffff;
-	}
-	.size-controls {
-			display: flex;
-			align-items: center;
-			gap: 8px;
-		}
-		.color-row {
-			display: flex;
-			align-items: center;
-			gap: 8px;
-		}
-		.color-row input[type='color'] {
-			width: 44px;
-			height: 28px;
-			padding: 2px;
-			border: 1px solid #3c3c3c;
-			border-radius: 6px;
-			background: #2d2d2d;
-			cursor: pointer;
-		}
-		.color-reset {
-			padding: 4px 12px;
-			border: 1px solid #3c3c3c;
-			border-radius: 6px;
-			background: #2d2d2d;
-			color: #cccccc;
-			font-size: 0.8125em;
-			cursor: pointer;
-		}
-		.color-reset:hover {
-			background: #3c3c3c;
-		}
-	.size-btn {
-		width: 32px;
-		height: 32px;
-		border-radius: 6px;
-		border: 1px solid #3c3c3c;
-		background: #2d2d2d;
-		color: #cccccc;
-		font-size: 1em;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	.size-btn:hover {
-		background: #3c3c3c;
-	}
-	input[type="range"] {
-		flex: 1;
-		accent-color: #094771;
-		height: 4px;
-	}
-	select {
-		padding: 6px 10px;
-		border-radius: 6px;
-		border: 1px solid #3c3c3c;
-		background: #2d2d2d;
-		color: #cccccc;
-		font-size: 0.8125em;
-	}
-	.footer {
-		padding: 12px 20px;
-		border-top: 1px solid #3c3c3c;
-		display: flex;
-		justify-content: flex-end;
-		flex-shrink: 0;
-	}
-	.action-btn {
-		padding: 6px 20px;
-		border-radius: 6px;
-		border: none;
-		background: #094771;
-		color: #ffffff;
-		font-size: 0.8125em;
-		cursor: pointer;
-	}
-	.action-btn:hover {
-		background: #1a5a8a;
-	}
-</style>
