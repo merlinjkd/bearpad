@@ -16,6 +16,12 @@ import {
 
 	import { editorCommands } from './lib/commands';
 
+	// Platform detection used ONLY to choose which titlebar slot holds the window
+	// controls. Deliberately navigator.userAgent, not @tauri-apps/plugin-os: it is
+	// synchronous, needs no Cargo crate, no capability entry and no async first-paint
+	// flash. See the cross-platform UI standard in the tauri-desktop-app skill.
+	const isMac = navigator.userAgent.includes('Macintosh');
+
 	type Theme = 'dark' | 'light' | 'system';
 
 	const FILTERS = [
@@ -638,23 +644,36 @@ import {
 	});
 </script>
 
+{#snippet windowControls()}
+	<div class="title-bar-controls">
+		<button class="tb-btn" aria-label="Minimize" onclick={() => getCurrentWindow().minimize()}>
+			<span class="tb-glyph">─</span>
+		</button>
+		<button class="tb-btn" aria-label="Maximize" onclick={() => getCurrentWindow().toggleMaximize()}>
+			<span class="tb-glyph">□</span>
+		</button>
+		<button class="tb-btn tb-close" aria-label="Close" onclick={() => getCurrentWindow().close()}>
+			<span class="tb-glyph">✕</span>
+		</button>
+	</div>
+{/snippet}
+
 <div class="app-root" data-theme={resolvedTheme} style="--ui-font-size:{uiFontSize}px">
 	<div class="title-bar" data-tauri-drag-region>
-		<img class="title-bar-icon" src={bearpawIcon} alt="" draggable="false" />
-		<span class="title-bar-title" data-tauri-drag-region>BearPad - {fileName(activeTab())}</span>
-		<!-- Window controls are hand-drawn on EVERY platform. There is deliberately no
-		     `{#if !isMac}` branch and no macOS overlay: one framing code path for all
-		     three OSes. See the cross-platform UI standard in the tauri-desktop-app skill. -->
-		<div class="title-bar-controls">
-			<button class="tb-btn" aria-label="Minimize" onclick={() => getCurrentWindow().minimize()}>
-				<span class="tb-glyph">─</span>
-			</button>
-			<button class="tb-btn" aria-label="Maximize" onclick={() => getCurrentWindow().toggleMaximize()}>
-				<span class="tb-glyph">□</span>
-			</button>
-			<button class="tb-btn tb-close" aria-label="Close" onclick={() => getCurrentWindow().close()}>
-				<span class="tb-glyph">✕</span>
-			</button>
+		<!-- Three semantic slots: leading controls / content / trailing controls. Which
+		     slot holds the controls is the ONLY platform difference, and it is structural
+		     rather than a `flex-direction: row-reverse` hack, so the icon and title never
+		     move. Controls are hand-drawn on every OS - no macOS overlay, no native
+		     traffic lights. See the cross-platform UI standard in the tauri-desktop-app skill. -->
+		<div class="titlebar-slot" data-tauri-drag-region>
+			{#if isMac}{@render windowControls()}{/if}
+		</div>
+		<div class="titlebar-content" data-tauri-drag-region>
+			<img class="title-bar-icon" src={bearpawIcon} alt="" draggable="false" />
+			<span class="title-bar-title" data-tauri-drag-region>BearPad - {fileName(activeTab())}</span>
+		</div>
+		<div class="titlebar-slot" data-tauri-drag-region>
+			{#if !isMac}{@render windowControls()}{/if}
 		</div>
 	</div>
 	<div class="menu-bar" role="menubar">
@@ -923,6 +942,22 @@ import {
 		flex-shrink: 0;
 		-webkit-app-region: drag;
 	}
+	/* Three semantic slots. The content slot absorbs the free space, which pushes the
+	   TRAILING controls slot to the far edge on Windows/Linux; on macOS the LEADING slot
+	   holds the controls instead and the content simply follows it. No row-reverse, so
+	   the icon and title never get relocated. */
+	.titlebar-slot {
+		display: flex;
+		align-items: center;
+		gap: 2px;
+	}
+	.titlebar-content {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex: 1;
+		min-width: 0;
+	}
 	.title-bar-icon {
 		width: 24px;
 		height: 24px;
@@ -934,7 +969,6 @@ import {
 		color: var(--title-text);
 	}
 	.title-bar-controls {
-		margin-left: auto;
 		display: flex;
 		gap: 2px;
 		-webkit-app-region: no-drag;
