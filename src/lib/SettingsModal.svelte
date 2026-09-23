@@ -49,15 +49,18 @@
 	] as const;
 </script>
 
-<!-- All styling is Tailwind utilities (migration step 4c). The <style> block is
-     gone; its rules had to be deleted rather than superseded: Svelte scopes
-     component selectors to two classes, so a surviving rule would outrank a
-     single-class utility on specificity and silently defeat it. Colors are
-     intentionally the same hardcoded values as before — this modal was already
-     theme-invariant (no vars), and the migration must not change appearance.
+<!-- Styling is Tailwind utilities (migration step 4c — the <style> block is gone; its rules
+     had to be deleted rather than superseded, because Svelte scopes component selectors to
+     two classes and a surviving rule would outrank a single-class utility on specificity).
+     The controls are shadcn-svelte components (step 5b): Slider for the font sizes, Select
+     for the dropdowns, ToggleGroup for the Theme bar, Button for the actions.
 
-     Escape closes via the sheet's keydown; the overlay's onclick is the
-     click-outside close. Both preserved verbatim. -->
+     This modal is deliberately theme-invariant — its palette is hardcoded dark and does not
+     follow the app theme. The shadcn tokens are therefore scoped to `.sheet` in app.css, and
+     the Select popups portal into the sheet (portalProps={{ to: sheetEl }}) so they inherit
+     that scope rather than the body's theme-aware tokens.
+
+     Escape closes via the sheet's keydown; the overlay's onclick is the click-outside close. -->
 
 <div
 	class="overlay fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center"
@@ -77,10 +80,12 @@
 	>
 		<div class="header flex items-center justify-between px-5 py-4 border-b border-[#3c3c3c]">
 			<h2 class="m-0 text-[0.9375em] font-semibold text-white">Settings</h2>
-			<button
-				class="close-btn bg-transparent border-0 text-[#888] text-[1em] cursor-pointer py-0.5 px-1.5 rounded hover:bg-[#3c3c3c] hover:text-white"
+			<Button
+				variant="ghost"
+				size="icon-xs"
+				class="text-[#888]"
 				onclick={onClose}
-				>✕</button
+				aria-label="Close settings">✕</Button
 			>
 		</div>
 
@@ -301,10 +306,12 @@
 						value={settings.textColor || '#d4d4d4'}
 						onchange={(e) => onChange({ textColor: (e.target as HTMLInputElement).value })}
 					/>
-					<button
-						class="color-reset py-1 px-3 border border-[#3c3c3c] rounded-md bg-[#2d2d2d] text-[#cccccc] text-[0.8125em] cursor-pointer hover:bg-[#3c3c3c]"
+					<Button
+						variant="secondary"
+						size="sm"
+						class="border-border text-[0.8125em]"
 						onclick={() => onChange({ textColor: '' })}
-						>Reset</button
+						>Reset</Button
 					>
 				</div>
 			</div>
@@ -333,11 +340,7 @@
 		</div>
 
 		<div class="footer px-5 py-3 border-t border-[#3c3c3c] flex justify-end shrink-0">
-			<button
-				class="action-btn py-1.5 px-5 rounded-md border-0 bg-[#094771] text-white text-[0.8125em] cursor-pointer hover:bg-[#1a5a8a]"
-				onclick={onClose}
-				>Done</button
-			>
+			<Button class="px-5 text-[0.8125em]" onclick={onClose}>Done</Button>
 		</div>
 	</div>
 </div>
