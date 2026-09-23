@@ -835,9 +835,9 @@ import {
 	{/if}
 
 	{#if showAbout}
-		<div class="about-overlay" onclick={closeAbout} role="presentation">
+		<div class="about-overlay fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center" onclick={closeAbout} role="presentation">
 			<div
-				class="about-sheet"
+				class="about-sheet bg-menu-bg border border-menu-border rounded-[10px] py-6 px-8 w-[340px] flex flex-col items-center gap-2 shadow-[0_16px_48px_rgba(0,0,0,0.6)] font-[-apple-system,BlinkMacSystemFont,'Segoe_UI',system-ui,sans-serif]"
 				onclick={(e) => e.stopPropagation()}
 				onkeydown={(e) => {
 					if (e.key === 'Escape') closeAbout();
@@ -846,13 +846,13 @@ import {
 				aria-label="About BearPad"
 				tabindex="-1"
 			>
-				<img class="about-icon" src={bearpawIcon} alt="" draggable="false" />
-				<h2 class="about-name">BearPad</h2>
-				<p class="about-version">Version {appVersion}</p>
-				<p class="about-desc">
+				<img class="about-icon w-[72px] h-[72px] rounded-2xl mb-1.5" src={bearpawIcon} alt="" draggable="false" />
+				<h2 class="about-name m-0 text-[18px] font-semibold text-menu-text">BearPad</h2>
+				<p class="about-version m-0 text-[14px] text-[#888]">Version {appVersion}</p>
+				<p class="about-desc mt-1 mb-3 mx-0 text-[13px] text-[#999] text-center leading-[1.4]">
 					A small fast cross platform text and markdown editor. It features Scalable Fonts and UI, Text Transformation, Find and Replace, Multiple Tabs and Autosave. Built in Rust and Tauri.
 				</p>
-				<button class="about-ok" onclick={closeAbout}>OK</button>
+				<button class="about-ok py-1.5 px-7 border-0 rounded-md bg-[#094771] text-white text-[14px] cursor-pointer hover:bg-[#0a5a8f]" onclick={closeAbout}>OK</button>
 			</div>
 		</div>
 	{/if}
@@ -990,64 +990,11 @@ import {
 		font-size: 13px;
 		line-height: 1;
 	}
-	.about-overlay {
-		position: fixed;
-		inset: 0;
-		z-index: 9999;
-		background: rgba(0, 0, 0, 0.5);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	.about-sheet {
-		background: var(--menu-bg);
-		border: 1px solid var(--menu-border);
-		border-radius: 10px;
-		padding: 24px 32px;
-		width: 340px;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 8px;
-		box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-	}
-	.about-icon {
-		width: 72px;
-		height: 72px;
-		border-radius: 16px;
-		margin-bottom: 6px;
-	}
-	.about-name {
-		margin: 0;
-		font-size: 18px;
-		font-weight: 600;
-		color: var(--menu-text);
-	}
-	.about-version {
-		margin: 0;
-		font-size: 14px;
-		color: #888;
-	}
-	.about-desc {
-		margin: 4px 0 12px;
-		font-size: 13px;
-		color: #999;
-		text-align: center;
-		line-height: 1.4;
-	}
-	.about-ok {
-		padding: 6px 28px;
-		border: none;
-		border-radius: 6px;
-		background: #094771;
-		color: #ffffff;
-		font-size: 14px;
-		cursor: pointer;
-	}
-	.about-ok:hover {
-		background: #0a5a8f;
-	}
+	/* .about-overlay / .about-sheet / .about-icon / .about-name / .about-version /
+	   .about-desc / .about-ok now use Tailwind utilities on the markup. Unlike the
+	   settings modal, this dialog IS theme-aware (it reads --menu-bg / --menu-border /
+	   --menu-text), so it maps to the bg-menu-bg / border-menu-border / text-menu-text
+	   tokens and follows light/dark automatically. */
 	/* .menu-spacer / .menu-gear / .menu-item / .menu-label / .menu-dropdown /
 	   .menu-action / .menu-action-icon / .menu-sep now use Tailwind utilities on the
 	   markup. Deleting these rules is REQUIRED, not cosmetic: Svelte scopes component
