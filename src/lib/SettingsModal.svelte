@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { Slider } from "$lib/components/ui/slider/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
+	import * as Select from "$lib/components/ui/select/index.js";
+
+	// The Select popups are portalled. Target the sheet so they inherit its scoped tokens
+	// (this modal is theme-invariant) rather than the body's theme-aware ones — otherwise
+	// in light mode the dropdown would open light inside a dark modal.
+	let sheetEl: HTMLDivElement | undefined = $state();
 
 	interface SettingsData {
 		theme: 'dark' | 'light' | 'system';
@@ -52,6 +58,7 @@
 	role="presentation"
 >
 	<div
+		bind:this={sheetEl}
 		class="sheet bg-[#252526] border border-[#3c3c3c] rounded-[10px] min-w-[420px] max-w-[500px] max-h-[90vh] flex flex-col shadow-[0_16px_48px_rgba(0,0,0,0.6)] font-[-apple-system,BlinkMacSystemFont,'Segoe_UI',system-ui,sans-serif] text-[#cccccc] text-ui"
 		onclick={(e) => e.stopPropagation()}
 		onkeydown={(e) => {
@@ -160,81 +167,115 @@
 				<label class="text-[0.8125em] font-medium text-[#aaaaaa]" for="font-family-select"
 					>Font Family</label
 				>
-				<select
-					class="py-1.5 px-2.5 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[0.8125em]"
-					id="font-family-select"
+				<Select.Root
+					type="single"
 					value={settings.fontFamily}
-					onchange={(e) => onChange({ fontFamily: (e.target as HTMLSelectElement).value })}
+					onValueChange={(v) => onChange({ fontFamily: v })}
 				>
-					{#each FONT_OPTIONS as opt}
-						<option value={opt.value}>{opt.label}</option>
-					{/each}
-				</select>
+					<Select.Trigger
+						class="w-full bg-secondary dark:bg-secondary text-[0.8125em]"
+						id="font-family-select"
+					>
+						{FONT_OPTIONS.find((o) => o.value === settings.fontFamily)?.label ??
+							settings.fontFamily}
+					</Select.Trigger>
+					<Select.Content portalProps={{ to: sheetEl }}>
+						{#each FONT_OPTIONS as opt}
+							<Select.Item value={opt.value} label={opt.label}>{opt.label}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
 			</div>
 
 			<div class="field flex flex-col gap-2">
 				<label class="text-[0.8125em] font-medium text-[#aaaaaa]" for="word-wrap-select"
 					>Word Wrap</label
 				>
-				<select
-					class="py-1.5 px-2.5 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[0.8125em]"
-					id="word-wrap-select"
+				<Select.Root
+					type="single"
 					value={settings.wordWrap ? 'on' : 'off'}
-					onchange={(e) =>
-						onChange({ wordWrap: (e.target as HTMLSelectElement).value === 'on' })}
+					onValueChange={(v) => onChange({ wordWrap: v === 'on' })}
 				>
-					<option value="on">On</option>
-					<option value="off">Off</option>
-				</select>
+					<Select.Trigger
+						class="w-full bg-secondary dark:bg-secondary text-[0.8125em]"
+						id="word-wrap-select"
+					>
+						<Select.Value />
+					</Select.Trigger>
+					<Select.Content portalProps={{ to: sheetEl }}>
+						<Select.Item value="on" label="On">On</Select.Item>
+						<Select.Item value="off" label="Off">Off</Select.Item>
+					</Select.Content>
+				</Select.Root>
 			</div>
 
 			<div class="field flex flex-col gap-2">
 				<label class="text-[0.8125em] font-medium text-[#aaaaaa]" for="spellcheck-select"
 					>Spell Check</label
 				>
-				<select
-					class="py-1.5 px-2.5 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[0.8125em]"
-					id="spellcheck-select"
+				<Select.Root
+					type="single"
 					value={settings.spellcheck ? 'on' : 'off'}
-					onchange={(e) =>
-						onChange({ spellcheck: (e.target as HTMLSelectElement).value === 'on' })}
+					onValueChange={(v) => onChange({ spellcheck: v === 'on' })}
 				>
-					<option value="on">On</option>
-					<option value="off">Off</option>
-				</select>
+					<Select.Trigger
+						class="w-full bg-secondary dark:bg-secondary text-[0.8125em]"
+						id="spellcheck-select"
+					>
+						<Select.Value />
+					</Select.Trigger>
+					<Select.Content portalProps={{ to: sheetEl }}>
+						<Select.Item value="on" label="On">On</Select.Item>
+						<Select.Item value="off" label="Off">Off</Select.Item>
+					</Select.Content>
+				</Select.Root>
 			</div>
 
 			<div class="field flex flex-col gap-2">
 				<label class="text-[0.8125em] font-medium text-[#aaaaaa]" for="spell-lang-select"
 					>Spell Check Language</label
 				>
-				<select
-					class="py-1.5 px-2.5 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[0.8125em]"
-					id="spell-lang-select"
+				<Select.Root
+					type="single"
 					value={settings.spellLang ?? 'en_US'}
-					onchange={(e) => onChange({ spellLang: (e.target as HTMLSelectElement).value })}
+					onValueChange={(v) => onChange({ spellLang: v })}
 				>
-					<option value="en_US">English (US)</option>
-					<option value="en_CA">English (Canada)</option>
-					<option value="en_GB">English (UK)</option>
-					<option value="fr_CA">French (Canada)</option>
-					<option value="es_ES">Spanish</option>
-				</select>
+					<Select.Trigger
+						class="w-full bg-secondary dark:bg-secondary text-[0.8125em]"
+						id="spell-lang-select"
+					>
+						<Select.Value />
+					</Select.Trigger>
+					<Select.Content portalProps={{ to: sheetEl }}>
+						<Select.Item value="en_US" label="English (US)">English (US)</Select.Item>
+						<Select.Item value="en_CA" label="English (Canada)">English (Canada)</Select.Item>
+						<Select.Item value="en_GB" label="English (UK)">English (UK)</Select.Item>
+						<Select.Item value="fr_CA" label="French (Canada)">French (Canada)</Select.Item>
+						<Select.Item value="es_ES" label="Spanish">Spanish</Select.Item>
+					</Select.Content>
+				</Select.Root>
 			</div>
 
 			<div class="field flex flex-col gap-2">
 				<label class="text-[0.8125em] font-medium text-[#aaaaaa]" for="cursor-blink-select"
 					>Blinking Cursor</label
 				>
-				<select
-					class="py-1.5 px-2.5 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[0.8125em]"
-					id="cursor-blink-select"
+				<Select.Root
+					type="single"
 					value={settings.cursorBlink ? 'on' : 'off'}
-					onchange={(e) => onChange({ cursorBlink: (e.target as HTMLSelectElement).value === 'on' })}
+					onValueChange={(v) => onChange({ cursorBlink: v === 'on' })}
 				>
-					<option value="off">Off</option>
-					<option value="on">On</option>
-				</select>
+					<Select.Trigger
+						class="w-full bg-secondary dark:bg-secondary text-[0.8125em]"
+						id="cursor-blink-select"
+					>
+						<Select.Value />
+					</Select.Trigger>
+					<Select.Content portalProps={{ to: sheetEl }}>
+						<Select.Item value="off" label="Off">Off</Select.Item>
+						<Select.Item value="on" label="On">On</Select.Item>
+					</Select.Content>
+				</Select.Root>
 			</div>
 
 			<div class="field flex flex-col gap-2">
@@ -261,15 +302,22 @@
 				<label class="text-[0.8125em] font-medium text-[#aaaaaa]" for="default-format-select"
 					>Default File Format</label
 				>
-				<select
-					class="py-1.5 px-2.5 rounded-md border border-[#3c3c3c] bg-[#2d2d2d] text-[#cccccc] text-[0.8125em]"
-					id="default-format-select"
+				<Select.Root
+					type="single"
 					value={settings.defaultFormat || 'txt'}
-					onchange={(e) => onChange({ defaultFormat: (e.target as HTMLSelectElement).value as 'txt' | 'md' })}
+					onValueChange={(v) => onChange({ defaultFormat: v as 'txt' | 'md' })}
 				>
-					<option value="txt">Text (.txt)</option>
-					<option value="md">Markdown (.md)</option>
-				</select>
+					<Select.Trigger
+						class="w-full bg-secondary dark:bg-secondary text-[0.8125em]"
+						id="default-format-select"
+					>
+						<Select.Value />
+					</Select.Trigger>
+					<Select.Content portalProps={{ to: sheetEl }}>
+						<Select.Item value="txt" label="Text (.txt)">Text (.txt)</Select.Item>
+						<Select.Item value="md" label="Markdown (.md)">Markdown (.md)</Select.Item>
+					</Select.Content>
+				</Select.Root>
 			</div>
 		</div>
 
