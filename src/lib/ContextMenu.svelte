@@ -13,19 +13,28 @@
 	const left = contextMenu.x > window.innerWidth - 260;
 </script>
 
+<!-- All styling is Tailwind utilities (migration step 4d). The <style> block is
+     gone; its rules had to be deleted rather than superseded (Svelte-scoped rules
+     outrank single-class utilities on specificity).
+
+     The custom-context-menu class MUST stay: App.svelte's document click handler
+     does .closest('.custom-context-menu') to decide whether a click was inside the
+     menu. The edge-flip is now two conditional translate utilities instead of the
+     open-up/open-left classes — Tailwind composes translate-x and translate-y, so
+     both flips together still produce translate(-100%, -100%) exactly like the old
+     .open-up.open-left rule. -->
+
 <div
-	class="custom-context-menu"
-	class:open-up={up}
-	class:open-left={left}
+	class="custom-context-menu fixed z-[10000] bg-[#252526] border border-[#3c3c3c] rounded-md py-1 min-w-[220px] shadow-[0_8px_24px_rgba(0,0,0,0.5)] font-[-apple-system,BlinkMacSystemFont,'Segoe_UI',system-ui,sans-serif] text-ui {up ? 'translate-y-[-100%]' : ''} {left ? 'translate-x-[-100%]' : ''}"
 	style="left: {contextMenu.x}px; top: {contextMenu.y}px"
 	role="menu"
 >
 	{#each contextMenu.items as item}
 		{#if item.separator}
-			<hr />
+			<hr class="my-1 mx-2 border-t border-[#3c3c3c]" />
 		{:else}
 			<button
-				class="menu-item"
+				class="menu-item group flex items-center justify-between w-full py-1 px-4 border-0 bg-transparent text-[#cccccc] cursor-pointer text-left box-border enabled:hover:bg-[#094771] enabled:hover:text-white disabled:text-[#5a5a5a] disabled:cursor-default"
 				disabled={item.disabled}
 				onclick={() => {
 					if (!item.disabled && item.onClick) {
@@ -34,75 +43,13 @@
 					onhide();
 				}}
 			>
-				<span class="label">{item.label}</span>
+				<span class="label flex-1">{item.label}</span>
 				{#if item.shortcut}
-					<span class="shortcut">{item.shortcut}</span>
+					<span class="shortcut ml-8 text-[#6e6e6e] text-[0.875em] group-[&:enabled]:hover:text-[#a0a0a0]"
+						>{item.shortcut}</span
+					>
 				{/if}
 			</button>
 		{/if}
 	{/each}
 </div>
-
-<style>
-	.custom-context-menu {
-		position: fixed;
-		z-index: 10000;
-		background: #252526;
-		border: 1px solid #3c3c3c;
-		border-radius: 6px;
-		padding: 4px 0;
-		min-width: 220px;
-		box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-		font-size: var(--ui-font-size, 16px);
-	}
-	/* flip up: translate by its own height so the menu sits above the cursor */
-	.custom-context-menu.open-up {
-		transform: translateY(-100%);
-	}
-	/* flip left: shift back by its own width */
-	.custom-context-menu.open-left {
-		transform: translateX(-100%);
-	}
-	/* both flips */
-	.custom-context-menu.open-up.open-left {
-		transform: translate(-100%, -100%);
-	}
-	hr {
-		margin: 4px 8px;
-		border: none;
-		border-top: 1px solid #3c3c3c;
-	}
-	.menu-item {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		width: 100%;
-		padding: 4px 16px;
-		border: none;
-		background: transparent;
-		color: #cccccc;
-		cursor: pointer;
-		text-align: left;
-		box-sizing: border-box;
-	}
-	.menu-item:hover:not(:disabled) {
-		background: #094771;
-		color: #ffffff;
-	}
-	.menu-item:disabled {
-		color: #5a5a5a;
-		cursor: default;
-	}
-	.label {
-		flex: 1;
-	}
-	.shortcut {
-		margin-left: 32px;
-		color: #6e6e6e;
-		font-size: 0.875em;
-	}
-	.menu-item:hover:not(:disabled) .shortcut {
-		color: #a0a0a0;
-	}
-</style>
