@@ -645,17 +645,35 @@ import {
 </script>
 
 {#snippet windowControls()}
-	<div class="title-bar-controls flex gap-0.5 [-webkit-app-region:no-drag]">
-		<button class="tb-btn w-10 h-[30px] border-0 bg-transparent text-title-text text-[13px] cursor-pointer flex items-center justify-center rounded hover:bg-menu-hover" aria-label="Minimize" onclick={() => getCurrentWindow().minimize()}>
-			<span class="tb-glyph text-[13px] leading-none">─</span>
-		</button>
-		<button class="tb-btn w-10 h-[30px] border-0 bg-transparent text-title-text text-[13px] cursor-pointer flex items-center justify-center rounded hover:bg-menu-hover" aria-label="Maximize" onclick={() => getCurrentWindow().toggleMaximize()}>
-			<span class="tb-glyph text-[13px] leading-none">□</span>
-		</button>
-		<button class="tb-btn tb-close w-10 h-[30px] border-0 bg-transparent text-title-text text-[13px] cursor-pointer flex items-center justify-center rounded hover:bg-[#e81123] hover:text-white" aria-label="Close" onclick={() => getCurrentWindow().close()}>
-			<span class="tb-glyph text-[13px] leading-none">✕</span>
-		</button>
-	</div>
+	{#if isMac}
+		<!-- macOS: hand-drawn traffic lights in the native order (close / minimize / zoom)
+		     and geometry — 12px circles, 8px apart, 20px in from the window edge, glyphs
+		     appearing only on hover. The window is undecorated on every platform, so this
+		     is a close approximation, not the system's own controls. -->
+		<div class="title-bar-controls group/tl flex gap-2 pl-2 [-webkit-app-region:no-drag]">
+			<button class="size-3 shrink-0 rounded-full ring-[0.5px] ring-inset ring-black/25 bg-[#ff5f57] cursor-default flex items-center justify-center" aria-label="Close" onclick={() => getCurrentWindow().close()}>
+				<span class="tl-glyph text-[7px] leading-none text-[#4d0000] opacity-0 group-hover/tl:opacity-100">✕</span>
+			</button>
+			<button class="size-3 shrink-0 rounded-full ring-[0.5px] ring-inset ring-black/25 bg-[#febc2e] cursor-default flex items-center justify-center" aria-label="Minimize" onclick={() => getCurrentWindow().minimize()}>
+				<span class="tl-glyph text-[7px] leading-none text-[#5a3d00] opacity-0 group-hover/tl:opacity-100">─</span>
+			</button>
+			<button class="size-3 shrink-0 rounded-full ring-[0.5px] ring-inset ring-black/25 bg-[#28c840] cursor-default flex items-center justify-center" aria-label="Zoom" onclick={() => getCurrentWindow().toggleMaximize()}>
+				<span class="tl-glyph text-[7px] leading-none text-[#0d3d00] opacity-0 group-hover/tl:opacity-100">+</span>
+			</button>
+		</div>
+	{:else}
+		<div class="title-bar-controls flex gap-0.5 [-webkit-app-region:no-drag]">
+			<button class="tb-btn w-10 h-[30px] border-0 bg-transparent text-title-text text-[13px] cursor-pointer flex items-center justify-center rounded hover:bg-menu-hover" aria-label="Minimize" onclick={() => getCurrentWindow().minimize()}>
+				<span class="tb-glyph text-[13px] leading-none">─</span>
+			</button>
+			<button class="tb-btn w-10 h-[30px] border-0 bg-transparent text-title-text text-[13px] cursor-pointer flex items-center justify-center rounded hover:bg-menu-hover" aria-label="Maximize" onclick={() => getCurrentWindow().toggleMaximize()}>
+				<span class="tb-glyph text-[13px] leading-none">□</span>
+			</button>
+			<button class="tb-btn tb-close w-10 h-[30px] border-0 bg-transparent text-title-text text-[13px] cursor-pointer flex items-center justify-center rounded hover:bg-[#e81123] hover:text-white" aria-label="Close" onclick={() => getCurrentWindow().close()}>
+				<span class="tb-glyph text-[13px] leading-none">✕</span>
+			</button>
+		</div>
+	{/if}
 {/snippet}
 
 <div class="app-root" data-theme={resolvedTheme} style="--ui-font-size:{uiFontSize}px">
@@ -849,7 +867,7 @@ import {
 				<img class="about-icon w-[72px] h-[72px] rounded-2xl mb-1.5" src={bearpawIcon} alt="" draggable="false" />
 				<h2 class="about-name m-0 text-[18px] font-semibold text-menu-text">BearPad</h2>
 				<p class="about-version m-0 text-[14px] text-[#888]">Version {appVersion}</p>
-				<p class="about-desc mt-1 mb-3 mx-0 text-[13px] text-[#999] text-center leading-[1.4]">
+				<p class="about-desc mt-1 mb-3 mx-0 w-full text-[13px] text-[#999] text-left leading-[1.4]">
 					A small fast cross platform text and markdown editor. It features Scalable Fonts and UI, Text Transformation, Find and Replace, Multiple Tabs and Autosave. Built in Rust and Tauri.
 				</p>
 				<button class="about-ok py-1.5 px-7 border-0 rounded-md bg-[#094771] text-white text-[14px] cursor-pointer hover:bg-[#0a5a8f]" onclick={closeAbout}>OK</button>
