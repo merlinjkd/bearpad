@@ -227,36 +227,186 @@ fn app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
-/// Menu paste (right-click -> Paste) cannot use the webview clipboard APIs on
-/// Windows: `navigator.clipboard.readText()` is denied by WebView2, and
-/// `document.execCommand('paste')` is disabled for web content outright, so both
-/// are dead ends there. This reads through the plugin's Rust side instead and
-/// RETRIES, because a Windows clipboard read transiently fails while the source
-/// app still holds the clipboard open - which is what made menu paste look random.
+/// Clipboard reads and writes on Windows are not reliable as one-shot calls.
 ///
+/// Menu paste (right-click -> Paste) cannot use the webview clipboard APIs:
+/// `navigator.clipboard.readText()` is denied by WebView2 and
+/// `document.execCommand('paste')` is disabled for web content outright, so both
+/// are dead ends there. Going through the Rust side instead means going through
+/// the Win32 clipboard, which has two failure modes the webview's own Cmd+V path
+/// never hits:
+///
+///   1. Contention - `OpenClipboard` fails while the source app still holds it.
+///   2. Delayed rendering - browsers (Chrome, Edge, and therefore WebView2 itself)
+///      do not put text on the clipboard when you copy. They register the format
+///      and render it on demand via `WM_RENDERFORMAT`, so the first read triggers
+///      the render and can legitimately come back EMPTY or error while the browser
+///      produces the data. Chromium can take hundreds of milliseconds.
+///
+/// Case 2 is why pasting something copied from a browser never worked while a
+/// Notepad copy did: browsers are the delayed renderers. The first version of this
+/// retry gave the clipboard 225 ms in total (15/30/60/120) - far shorter than a
+/// busy browser needs - and the failure was swallowed into a silent no-op.
+///
+/// Neither an empty string nor an error is success: both are retried. The budget is
+/// asserted by `retry_budget_outlasts_a_delayed_render` so it cannot be quietly
+/// shortened back below the render window.
+const CLIPBOARD_ATTEMPTS: u32 = 14;
+const CLIPBOARD_FIRST_BACKOFF_MS: u64 = 15;
+const CLIPBOARD_MAX_BACKOFF_MS: u64 = 250;
+
+/// Backoff before retry number `attempt` (0-based), capped.
+fn clipboard_backoff_ms(attempt: u32) -> u64 {
+    (CLIPBOARD_FIRST_BACKOFF_MS << attempt.min(16)).min(CLIPBOARD_MAX_BACKOFF_MS)
+}
+
+/// Total ms we are willing to wait across `attempts` tries.
+fn clipboard_retry_budget_ms(attempts: u32) -> u64 {
+    (0..attempts.saturating_sub(1)).map(clipboard_backoff_ms).sum()
+}
+
+/// Run `read` until it yields a non-empty string, retrying with capped backoff.
+fn read_clipboard_with_retry<F>(attempts: u32, mut read: F) -> Result<String, String>
+where
+    F: FnMut() -> Result<String, String>,
+{
+    let mut last = String::from("clipboard read failed");
+    for attempt in 0..attempts {
+        match read() {
+            // An empty string is NOT success: on Windows a contended or
+            // delayed-render read can report success-with-nothing.
+            Ok(t) if !t.is_empty() => return Ok(t),
+            Ok(_) => last = String::from("clipboard is empty"),
+            Err(e) => last = e,
+        }
+        if attempt + 1 < attempts {
+            std::thread::sleep(std::time::Duration::from_millis(clipboard_backoff_ms(attempt)));
+        }
+    }
+    Err(last)
+}
+
+/// Run `write` until it succeeds - a copy can lose the same race a paste can.
+fn write_clipboard_with_retry<F>(attempts: u32, mut write: F) -> Result<(), String>
+where
+    F: FnMut() -> Result<(), String>,
+{
+    let mut last = String::from("clipboard write failed");
+    for attempt in 0..attempts {
+        match write() {
+            Ok(()) => return Ok(()),
+            Err(e) => last = e,
+        }
+        if attempt + 1 < attempts {
+            std::thread::sleep(std::time::Duration::from_millis(clipboard_backoff_ms(attempt)));
+        }
+    }
+    Err(last)
+}
+
 /// Runs on a blocking thread on purpose: the plugin documents that its read must
 /// not run on the main thread (Linux deadlock), and spawn_blocking also contains
 /// a panic from a poisoned clipboard mutex instead of taking the app down.
 #[tauri::command]
 async fn read_clipboard_text(app: tauri::AppHandle) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let mut last = String::from("clipboard read failed");
-        for attempt in 0..5u32 {
-            match app.clipboard().read_text() {
-                // An empty string is NOT success: on Windows a contended read can
-                // come back empty rather than erroring, so retry it like a failure.
-                Ok(t) if !t.is_empty() => return Ok(t),
-                Ok(_) => last = String::from("clipboard is empty"),
-                Err(e) => last = e.to_string(),
-            }
-            if attempt < 4 {
-                std::thread::sleep(std::time::Duration::from_millis(15 * (1 << attempt)));
-            }
-        }
-        Err(last)
+        read_clipboard_with_retry(CLIPBOARD_ATTEMPTS, || {
+            app.clipboard().read_text().map_err(|e| e.to_string())
+        })
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+/// Copy/cut through the same retrying path. A rejected write used to surface as
+/// nothing at all, which is indistinguishable from a copy that worked.
+#[tauri::command]
+async fn write_clipboard_text(app: tauri::AppHandle, text: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        write_clipboard_with_retry(CLIPBOARD_ATTEMPTS, || {
+            app.clipboard()
+                .write_text(text.clone())
+                .map_err(|e| e.to_string())
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[cfg(test)]
+mod clipboard_retry_tests {
+    use super::*;
+
+    #[test]
+    fn read_returns_the_first_non_empty_value() {
+        let mut calls = 0;
+        let got = read_clipboard_with_retry(5, || {
+            calls += 1;
+            Ok("hello".to_string())
+        });
+        assert_eq!(got.unwrap(), "hello");
+        assert_eq!(calls, 1, "must not retry once a real value arrives");
+    }
+
+    #[test]
+    fn read_retries_through_empty_then_error_then_success() {
+        // The Windows shape: empty (delayed render), error (contention), then data.
+        let mut calls = 0;
+        let got = read_clipboard_with_retry(6, || {
+            calls += 1;
+            match calls {
+                1 => Ok(String::new()),
+                2 => Err("clipboard occupied".to_string()),
+                _ => Ok("pasted".to_string()),
+            }
+        });
+        assert_eq!(got.unwrap(), "pasted");
+        assert_eq!(calls, 3);
+    }
+
+    #[test]
+    fn read_reports_the_last_failure_after_the_full_budget() {
+        let mut calls = 0;
+        let got = read_clipboard_with_retry(3, || {
+            calls += 1;
+            Err(format!("busy {calls}"))
+        });
+        assert_eq!(calls, 3, "must try every attempt before giving up");
+        assert_eq!(got.unwrap_err(), "busy 3");
+    }
+
+    #[test]
+    fn write_retries_then_succeeds() {
+        let mut calls = 0;
+        let got = write_clipboard_with_retry(4, || {
+            calls += 1;
+            if calls < 2 {
+                Err("clipboard busy".to_string())
+            } else {
+                Ok(())
+            }
+        });
+        assert!(got.is_ok());
+        assert_eq!(calls, 2);
+    }
+
+    #[test]
+    fn backoff_is_capped() {
+        assert_eq!(clipboard_backoff_ms(0), 15);
+        assert_eq!(clipboard_backoff_ms(1), 30);
+        assert_eq!(clipboard_backoff_ms(9), CLIPBOARD_MAX_BACKOFF_MS);
+        assert_eq!(clipboard_backoff_ms(15), CLIPBOARD_MAX_BACKOFF_MS);
+    }
+
+    #[test]
+    fn retry_budget_outlasts_a_delayed_render() {
+        let budget = clipboard_retry_budget_ms(CLIPBOARD_ATTEMPTS);
+        assert!(
+            budget >= 2000,
+            "clipboard retry budget is {budget} ms. Browsers render clipboard data on \
+             demand and need far longer than the 225 ms that made menu paste fail."
+        );
+    }
 }
 
 #[tauri::command]
@@ -432,6 +582,7 @@ pub fn run() {
             app_version,
             add_to_dictionary,
             read_clipboard_text,
+            write_clipboard_text,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

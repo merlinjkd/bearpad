@@ -48,11 +48,13 @@
 		cursorBlink = false,
 		textColor = '',
 		onStatusChange,
+		onNotice,
 	}: {
 		onReady?: (ref: EditorExposed) => void;
 		doc?: string;
 		onDirtyChange?: (dirty: boolean) => void;
 		onStatusChange?: (status: { line: number; col: number; selCount: number }) => void;
+		onNotice?: (message: string) => void;
 		theme?: string;
 		fontSize?: number;
 		fontFamily?: string;
@@ -419,20 +421,35 @@
 					const text = getSelectedText();
 					if (!text) return;
 					try {
-						await writeText(text);
-					} catch {
-						await navigator.clipboard.writeText(text);
+						// Rust side, which retries: a copy can lose the same race a paste
+						// can, and a lost copy used to reject silently.
+						await invoke('write_clipboard_text', { text });
+					} catch (e) {
+						console.error('[copy] write_clipboard_text failed:', e);
+						try {
+							await navigator.clipboard.writeText(text);
+						} catch {
+							/* nothing else to try */
+						}
 					}
 				},
 
 				handleCut: async () => {
 					const text = getSelectedText();
 					if (!text) return;
+					let copied = true;
 					try {
-						await writeText(text);
-					} catch {
-						await navigator.clipboard.writeText(text);
+						await invoke('write_clipboard_text', { text });
+					} catch (e) {
+						console.error('[cut] write_clipboard_text failed:', e);
+						try {
+							await navigator.clipboard.writeText(text);
+						} catch {
+							copied = false;
+						}
 					}
+					// Never delete the selection we failed to copy.
+					if (!copied) return;
 					const sel = view.state.selection.main;
 					view.dispatch({
 						changes: { from: sel.from, to: sel.to, insert: '' },
@@ -461,7 +478,13 @@
 							rawText = '';
 						}
 					}
-					if (!rawText) return;
+					if (!rawText) {
+						// Never fail silently again. This exact spot was mis-reported as
+						// "paste is broken" twice, because a read that failed looked
+						// identical to a clipboard that was genuinely empty.
+						onNotice?.('Paste failed - the clipboard was busy. Try again.');
+						return;
+					}
 					const sel = view.state.selection.main;
 					view.dispatch({
 						changes: { from: sel.from, to: sel.to, insert: rawText },

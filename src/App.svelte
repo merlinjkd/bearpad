@@ -52,6 +52,16 @@ import {
 	let status = $state({ line: 1, col: 1, selCount: 0 });
 	let showSettings = $state(false);
 	let showAbout = $state(false);
+	// Transient status-bar message. Dialogs and the file name are not the right
+	// place to tell the user a clipboard operation failed, and a console.error is
+	// invisible in a release build.
+	let notice = $state('');
+	let noticeTimer: ReturnType<typeof setTimeout> | undefined;
+	function showNotice(message: string) {
+		notice = message;
+		clearTimeout(noticeTimer);
+		noticeTimer = setTimeout(() => (notice = ''), 5000);
+	}
 	let appVersion = $state('');
 	let theme = $state<Theme>('dark');
 	let fontSize = $state(18);
@@ -823,6 +833,7 @@ import {
 					{cursorBlink}
 					{textColor}
 					onStatusChange={(s) => (status = s)}
+					onNotice={showNotice}
 					/>
 			</div>
 		{/each}
@@ -833,6 +844,9 @@ import {
 			{fileName(activeTab())}
 		</span>
 		<span class="status-right flex items-center gap-3.5 shrink-0">
+			{#if notice}
+				<span class="status-item whitespace-nowrap" role="status">{notice}</span>
+			{/if}
 			{#if status.selCount > 0}
 				<span class="status-item whitespace-nowrap">{status.selCount} selected</span>
 			{/if}
