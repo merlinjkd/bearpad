@@ -5,6 +5,7 @@
 	import SettingsModal from './lib/SettingsModal.svelte';
 	import { invoke } from '@tauri-apps/api/core';
 	import { open, save as showSaveDialog, confirm as showConfirm } from '@tauri-apps/plugin-dialog';
+import { listen } from '@tauri-apps/api/event';
 	import { getCurrentWindow } from '@tauri-apps/api/window';
 	import bearpawIcon from './assets/bearpaw.png';
 import {
@@ -292,7 +293,13 @@ import {
 	async function openFile() {
 		const selected = await open({ filters: FILTERS, multiple: false });
 		if (!selected) return;
-		const path = selected as string;
+		await openPath(selected as string);
+	}
+
+	// Open `path` in a tab, reusing it when already open. Also the entry point for a
+	// file handed to the app at launch (double-click / Open With) and for a file
+	// handed over by a second launch - see the onMount wiring.
+	async function openPath(path: string, dropEmptyUntitled = false) {
 		const existing = tabs.find((t) => t.path === path);
 		if (existing) {
 			activeTabId = existing.id;
@@ -301,12 +308,26 @@ import {
 		}
 		try {
 			const content = await invoke<string>('read_file', { path });
+			// Drop untouched untitled buffers when this is a launch-time open - the
+			// blank tab the app starts with, and any empty ones restored from the
+			// crash-recovery store - rather than leaving "blank file" beside the file
+			// the user just asked to open, which is exactly what they reported seeing.
+			const emptyUntitled = dropEmptyUntitled
+				? tabs.filter((t) => !t.path && (t.ref?.getContent() ?? '').length === 0)
+				: [];
 			const tab: TabState = { id: tabSeq++, path, doc: content, ref: null };
 			tabs.push(tab);
 			activeTabId = tab.id;
+			for (const empty of emptyUntitled) {
+				const idx = tabs.findIndex((t) => t.id === empty.id);
+				if (idx !== -1) tabs.splice(idx, 1);
+			}
 			updateTitle();
 		} catch (e) {
 			console.error('Failed to open file:', e);
+			// Silent here meant the user saw the blank default editor and concluded
+			// the file was empty. Say something instead.
+			showNotice('Could not open that file.');
 		}
 	}
 
@@ -314,7 +335,15 @@ import {
 		const tab = activeTab();
 		if (!tab) return;
 		if (tab.path) {
-			const content = tab.ref?.getContent() ?? '';
+			const ref = tab.ref;
+			if (!ref) {
+				// Guard against the old `tab.ref?.getContent() ?? ''`, which would
+				// write an EMPTY file over a real document if the editor was ever
+				// unmounted at save time. Losing a file is worse than not saving.
+				showNotice('Save failed - the editor is not ready. Nothing was written.');
+				return;
+			}
+			const content = ref.getContent();
 			try {
 				await invoke('write_file', { path: tab.path, content });
 				tab.ref?.markSaved();
@@ -336,7 +365,13 @@ import {
 		});
 		if (!selected) return;
 		const path = selected as string;
-		const content = tab.ref?.getContent() ?? '';
+		const ref = tab.ref;
+		if (!ref) {
+			// Same guard as saveFile: never create an empty file from a null ref.
+			showNotice('Save failed - the editor is not ready. Nothing was written.');
+			return;
+		}
+		const content = ref.getContent();
 		try {
 			await invoke('write_file', { path, content });
 			tab.path = path;
@@ -592,8 +627,25 @@ import {
 		updateTitle();
 	}
 
-	onMount(() => {
-		restoreRecovery();
+	onMount(async () => {
+		await restoreRecovery();
+
+		// A file handed to us at launch (double-click / Open With), or handed over by a
+		// second launch while this window is already open. Consumed HERE, after the
+		// starter and recovered tabs exist, so the file gets its own tab instead of
+		// landing beside a blank one - and so that blank starter tab can be dropped.
+		// Without this the app just showed a blank new tab, which users reported as
+		// "the file I saved is empty".
+		try {
+			const pending = await invoke<string | null>('take_pending_open');
+			if (pending) await openPath(pending, true);
+			await listen<string>('bearpad://open-file', (event) => {
+				void openPath(event.payload);
+			});
+		} catch (e) {
+			console.error('Open-file wiring failed:', e);
+		}
+
 		// Context menu listener
 		document.addEventListener('contextmenu', onContextMenu as unknown as EventListener);
 

@@ -3,7 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use hunspell_rs::{CheckResult, Hunspell};
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
@@ -47,9 +47,95 @@ fn set_dirty(dirty: bool, state: tauri::State<'_, Mutex<bool>>) {
     *state.lock().unwrap() = dirty;
 }
 
+/// Decode text the way a Windows user's .txt file actually arrives.
+///
+/// `fs::read_to_string` fails outright on anything that is not valid UTF-8, and
+/// files that reach BearPad from Windows are routinely UTF-16 (Notepad's historic
+/// default, still written by plenty of Windows tooling) or a legacy ANSI code
+/// page. Both made File > Open do nothing at all: the read errored, the frontend
+/// logged to a console that a release build does not show, and no tab was created,
+/// so the user saw the blank default editor and reported an empty file.
+fn decode_text(bytes: &[u8]) -> String {
+    if let Some(rest) = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]) {
+        // UTF-8 with a BOM: the BOM itself must not reach the editor.
+        return String::from_utf8_lossy(rest).into_owned();
+    }
+    if let Some(rest) = bytes.strip_prefix(&[0xFF, 0xFE]) {
+        return utf16_to_string(rest, true);
+    }
+    if let Some(rest) = bytes.strip_prefix(&[0xFE, 0xFF]) {
+        return utf16_to_string(rest, false);
+    }
+    // BOM-less UTF-16 has to be checked BEFORE the UTF-8 test: ASCII text encoded
+    // as UTF-16 is technically valid UTF-8 full of NUL bytes, so from_utf8 happily
+    // "succeeds" and hands the editor a string riddled with \0.
+    if let Some(little_endian) = sniff_utf16_without_bom(bytes) {
+        return utf16_to_string(bytes, little_endian);
+    }
+    if let Ok(s) = std::str::from_utf8(bytes) {
+        return s.to_string();
+    }
+    // Otherwise assume the legacy Windows code page rather than refuse to open.
+    decode_windows_1252(bytes)
+}
+
+fn utf16_to_string(bytes: &[u8], little_endian: bool) -> String {
+    let units: Vec<u16> = bytes
+        .chunks_exact(2)
+        .map(|c| {
+            if little_endian {
+                u16::from_le_bytes([c[0], c[1]])
+            } else {
+                u16::from_be_bytes([c[0], c[1]])
+            }
+        })
+        .collect();
+    String::from_utf16_lossy(&units)
+}
+
+/// Detect BOM-less UTF-16 from the NUL pattern. Returns the endianness. Text
+/// encoded this way has a NUL on one side of every ASCII character, so one
+/// parity is almost entirely NULs; binary data does not look like this.
+fn sniff_utf16_without_bom(bytes: &[u8]) -> Option<bool> {
+    if bytes.len() < 4 {
+        return None;
+    }
+    let pairs = bytes.len() / 2;
+    let even_nuls = bytes.iter().step_by(2).filter(|b| **b == 0).count();
+    let odd_nuls = bytes.iter().skip(1).step_by(2).filter(|b| **b == 0).count();
+    if odd_nuls * 4 >= pairs * 3 {
+        Some(true) // little-endian: the NUL is the high byte
+    } else if even_nuls * 4 >= pairs * 3 {
+        Some(false)
+    } else {
+        None
+    }
+}
+
+/// Decode as Windows-1252, the usual meaning of an "ANSI" .txt. Bytes 0x80..=0x9F
+/// carry printable characters where Latin-1 leaves control codes.
+fn decode_windows_1252(bytes: &[u8]) -> String {
+    const HIGH: [char; 32] = [
+        '\u{20AC}', '\u{FFFD}', '\u{201A}', '\u{0192}', '\u{201E}', '\u{2026}', '\u{2020}',
+        '\u{2021}', '\u{02C6}', '\u{2030}', '\u{0160}', '\u{2039}', '\u{0152}', '\u{FFFD}',
+        '\u{017D}', '\u{FFFD}', '\u{FFFD}', '\u{2018}', '\u{2019}', '\u{201C}', '\u{201D}',
+        '\u{2022}', '\u{2013}', '\u{2014}', '\u{02DC}', '\u{2122}', '\u{0161}', '\u{203A}',
+        '\u{0153}', '\u{FFFD}', '\u{017E}', '\u{0178}',
+    ];
+    let mut out = String::with_capacity(bytes.len());
+    for &b in bytes {
+        match b {
+            0x80..=0x9F => out.push(HIGH[(b - 0x80) as usize]),
+            _ => out.push(b as char), // ASCII, then Latin-1 above 0xA0
+        }
+    }
+    out
+}
+
 #[tauri::command]
 fn read_file(path: String) -> Result<String, String> {
-    fs::read_to_string(&path).map_err(|e| format!("Failed to read file: {}", e))
+    let bytes = fs::read(&path).map_err(|e| format!("Failed to read file: {}", e))?;
+    Ok(decode_text(&bytes))
 }
 
 #[tauri::command]
@@ -260,7 +346,9 @@ fn clipboard_backoff_ms(attempt: u32) -> u64 {
     (CLIPBOARD_FIRST_BACKOFF_MS << attempt.min(16)).min(CLIPBOARD_MAX_BACKOFF_MS)
 }
 
-/// Total ms we are willing to wait across `attempts` tries.
+/// Total ms we are willing to wait across `attempts` tries. Test-only: the budget
+/// guard asserts it, the runtime never needs the number.
+#[cfg(test)]
 fn clipboard_retry_budget_ms(attempts: u32) -> u64 {
     (0..attempts.saturating_sub(1)).map(clipboard_backoff_ms).sum()
 }
@@ -409,6 +497,113 @@ mod clipboard_retry_tests {
     }
 }
 
+#[cfg(test)]
+mod file_encoding_tests {
+    use super::*;
+
+    const TEXT: &str = "LINE ONE\nLINE TWO\n";
+
+    fn sample(name: &str) -> std::path::PathBuf {
+        let mut p = std::env::temp_dir();
+        p.push(format!("bearpad-enc-{}-{}", std::process::id(), name));
+        p
+    }
+
+    fn read(path: &std::path::Path) -> Result<String, String> {
+        read_file(path.to_string_lossy().into_owned())
+    }
+
+    #[test]
+    fn reads_plain_utf8() {
+        let p = sample("utf8.txt");
+        std::fs::write(&p, TEXT).unwrap();
+        assert_eq!(read(&p).unwrap(), TEXT);
+        let _ = std::fs::remove_file(&p);
+    }
+
+    #[test]
+    fn reads_utf8_with_bom_without_leaking_the_bom() {
+        let p = sample("utf8-bom.txt");
+        let mut bytes = vec![0xEF, 0xBB, 0xBF];
+        bytes.extend_from_slice(TEXT.as_bytes());
+        std::fs::write(&p, &bytes).unwrap();
+        assert_eq!(read(&p).unwrap(), TEXT);
+        let _ = std::fs::remove_file(&p);
+    }
+
+    #[test]
+    fn reads_utf16le_with_bom() {
+        let p = sample("utf16le.txt");
+        let mut bytes = vec![0xFF, 0xFE];
+        for u in TEXT.encode_utf16() {
+            bytes.extend_from_slice(&u.to_le_bytes());
+        }
+        std::fs::write(&p, &bytes).unwrap();
+        assert_eq!(
+            read(&p).unwrap(),
+            TEXT,
+            "Notepad's historic default; must not open blank"
+        );
+        let _ = std::fs::remove_file(&p);
+    }
+
+    #[test]
+    fn reads_utf16be_with_bom() {
+        let p = sample("utf16be.txt");
+        let mut bytes = vec![0xFE, 0xFF];
+        for u in TEXT.encode_utf16() {
+            bytes.extend_from_slice(&u.to_be_bytes());
+        }
+        std::fs::write(&p, &bytes).unwrap();
+        assert_eq!(read(&p).unwrap(), TEXT);
+        let _ = std::fs::remove_file(&p);
+    }
+
+    #[test]
+    fn reads_utf16le_without_bom() {
+        let p = sample("utf16le-nobom.txt");
+        let mut bytes = Vec::new();
+        for u in TEXT.encode_utf16() {
+            bytes.extend_from_slice(&u.to_le_bytes());
+        }
+        std::fs::write(&p, &bytes).unwrap();
+        assert_eq!(read(&p).unwrap(), TEXT, "UTF-16 from Windows tooling has no BOM");
+        let _ = std::fs::remove_file(&p);
+    }
+
+    #[test]
+    fn reads_windows_1252_bytes() {
+        let p = sample("ansi.txt");
+        // 0xE9 is e-acute in CP1252/Latin-1 and is NOT valid UTF-8.
+        std::fs::write(&p, b"caf\xE9\r\n").unwrap();
+        let got = read(&p).expect("a legacy ANSI .txt must still open");
+        assert!(got.contains("café"), "got {got:?}");
+        let _ = std::fs::remove_file(&p);
+    }
+}
+
+#[cfg(test)]
+mod open_file_arg_tests {
+    use super::*;
+
+    fn args(list: &[&str]) -> std::vec::IntoIter<String> {
+        list.iter().map(|s| s.to_string()).collect::<Vec<_>>().into_iter()
+    }
+
+    #[test]
+    fn takes_the_file_the_shell_passed() {
+        // What Windows hands a "Open with" association: exe then file.
+        let got = path_from_args(args(&["bearpad.exe", r"C:\Users\p\Desktop\note.txt"]));
+        assert_eq!(got.as_deref(), Some(r"C:\Users\p\Desktop\note.txt"));
+    }
+
+    #[test]
+    fn ignores_flags_and_a_bare_launch() {
+        assert_eq!(path_from_args(args(&["bearpad", "--flag", "-v"])), None);
+        assert_eq!(path_from_args(args(&["bearpad"])), None);
+    }
+}
+
 #[tauri::command]
 fn suggest_spellings(
     word: String,
@@ -509,12 +704,54 @@ mod tests {
     }
 }
 
+/// A file path handed to the app before or while it starts.
+///
+/// Two sources feed this: the positional argument Windows and Linux pass when a
+/// file is double-clicked with BearPad associated, and macOS's `Opened` event (the
+/// Finder's Open With). The path is kept in state as well as emitted, because the
+/// frontend is usually not listening yet when it arrives - and that gap is exactly
+/// what made a double-clicked file open as a blank new tab, reported as "the file
+/// I saved is empty".
+#[derive(Default)]
+struct PendingOpen(Mutex<Option<String>>);
+
+/// First non-flag argument after the executable.
+fn path_from_args<I: Iterator<Item = String>>(args: I) -> Option<String> {
+    args.skip(1).find(|a| !a.starts_with('-'))
+}
+
+/// Record a path for the frontend and announce it, in case it is already running.
+fn open_path_in_app<R: tauri::Runtime>(app: &tauri::AppHandle<R>, path: &str) {
+    if let Some(state) = app.try_state::<PendingOpen>() {
+        if let Ok(mut slot) = state.0.lock() {
+            *slot = Some(path.to_string());
+        }
+    }
+    let _ = app.emit("bearpad://open-file", path.to_string());
+}
+
+#[tauri::command]
+fn take_pending_open(state: tauri::State<'_, PendingOpen>) -> Option<String> {
+    state.0.lock().ok().and_then(|mut slot| slot.take())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Registered FIRST, per the plugin's own guidance: a second launch (another
+        // double-click) is routed here instead of starting a second copy of the app.
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            if let Some(path) = path_from_args(argv.into_iter()) {
+                open_path_in_app(app, &path);
+            }
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(Mutex::new(false))
+        .manage(PendingOpen(Mutex::new(path_from_args(std::env::args()))))
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             let dict_dir = dir.join("dicts");
@@ -583,7 +820,19 @@ pub fn run() {
             add_to_dictionary,
             read_clipboard_text,
             write_clipboard_text,
+            take_pending_open,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, _event| {
+            // macOS hands over "open this file" as an event, not an argument.
+            #[cfg(any(target_os = "macos", target_os = "ios"))]
+            if let tauri::RunEvent::Opened { urls } = _event {
+                for url in urls {
+                    if let Ok(path) = url.to_file_path() {
+                        open_path_in_app(_app, &path.to_string_lossy());
+                    }
+                }
+            }
+        });
 }
