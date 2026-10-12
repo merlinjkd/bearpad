@@ -392,6 +392,135 @@ where
     Err(last)
 }
 
+/// Strip the self-describing header that Windows' "HTML Format" carries, returning
+/// just the HTML fragment. Header lines look like `StartFragment:0000000141`, and
+/// the offsets are BYTE offsets from the start of the payload.
+///
+/// Deliberately cross-platform and pure so it is unit-tested on every OS; only the
+/// caller that fetches the payload is Windows-specific. Anything unexpected returns
+/// the payload unchanged rather than panicking or slicing mid-character.
+fn fragment_from_cf_html(payload: &str) -> String {
+    let offset = |name: &str| -> Option<usize> {
+        payload
+            .lines()
+            .take(16)
+            .find_map(|line| line.strip_prefix(name)?.trim().parse::<usize>().ok())
+    };
+    match (offset("StartFragment:"), offset("EndFragment:")) {
+        (Some(start), Some(end))
+            if start < end
+                && end <= payload.len()
+                && payload.is_char_boundary(start)
+                && payload.is_char_boundary(end) =>
+        {
+            payload[start..end].to_string()
+        }
+        _ => payload.to_string(),
+    }
+}
+
+/// Read the clipboard's registered "HTML Format" payload on Windows.
+///
+/// This is the fix for the browser-copy paste: browsers register this format eagerly,
+/// while the plain-text flavour (`CF_UNICODETEXT`) is delayed-rendered and can
+/// legitimately read back empty through every retry of the text path.
+#[cfg(windows)]
+fn read_windows_html_format() -> Option<String> {
+    use windows_sys::Win32::Foundation::HWND;
+    use windows_sys::Win32::System::DataExchange::{
+        CloseClipboard, GetClipboardData, OpenClipboard, RegisterClipboardFormatW,
+    };
+    use windows_sys::Win32::System::Memory::{GlobalLock, GlobalSize, GlobalUnlock};
+
+    let name: Vec<u16> = "HTML Format\0".encode_utf16().collect();
+    unsafe {
+        let format = RegisterClipboardFormatW(name.as_ptr());
+        if format == 0 || OpenClipboard(std::ptr::null_mut::<std::ffi::c_void>() as HWND) == 0 {
+            return None;
+        }
+        let handle = GetClipboardData(format);
+        let mut out = None;
+        if !handle.is_null() {
+            let ptr = GlobalLock(handle) as *const u8;
+            if !ptr.is_null() {
+                let len = GlobalSize(handle);
+                let bytes = std::slice::from_raw_parts(ptr, len);
+                // The allocator NUL-pads the block; the payload itself is UTF-8.
+                let end = bytes.iter().position(|b| *b == 0).unwrap_or(len);
+                out = Some(String::from_utf8_lossy(&bytes[..end]).to_string());
+                GlobalUnlock(handle);
+            }
+        }
+        CloseClipboard();
+        out
+    }
+}
+
+#[cfg(not(windows))]
+fn read_windows_html_format() -> Option<String> {
+    None
+}
+
+/// The clipboard's HTML flavour, reduced to the fragment. Retried on the same budget
+/// as the text read: an HTML render can be delayed too, just far less often than the
+/// plain-text one. The frontend converts the fragment to plain text.
+#[tauri::command]
+async fn read_clipboard_html() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        read_clipboard_with_retry(CLIPBOARD_ATTEMPTS, || match read_windows_html_format() {
+            Some(payload) => {
+                let fragment = fragment_from_cf_html(&payload);
+                if fragment.trim().is_empty() {
+                    Err(String::from("clipboard html is empty"))
+                } else {
+                    Ok(fragment)
+                }
+            }
+            None => Err(String::from("clipboard has no html format")),
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[cfg(test)]
+mod cf_html_tests {
+    use super::*;
+
+    /// Build a payload with real byte offsets, padded so the header length is fixed.
+    fn payload(inner: &str) -> String {
+        let start = "Version:0.9\r\nStartHTML:0000000000\r\nEndHTML:0000000000\r\nStartFragment:0000000000\r\nEndFragment:0000000000\r\n".len();
+        let end = start + inner.len();
+        format!(
+            "Version:0.9\r\nStartHTML:{:010}\r\nEndHTML:{:010}\r\nStartFragment:{:010}\r\nEndFragment:{:010}\r\n{}",
+            start, end, start, end, inner
+        )
+    }
+
+    #[test]
+    fn slices_the_fragment_using_the_header_offsets() {
+        let html = "<b>Hello</b> world";
+        assert_eq!(fragment_from_cf_html(&payload(html)), html);
+    }
+
+    #[test]
+    fn passes_through_payloads_without_a_header() {
+        let raw = "<b>no header here</b>";
+        assert_eq!(fragment_from_cf_html(raw), raw);
+    }
+
+    #[test]
+    fn refuses_nonsense_offsets_instead_of_panicking() {
+        for broken in [
+            "Version:0.9\r\nStartFragment:0000000050\r\nEndFragment:0000000010\r\nrest",
+            "Version:0.9\r\nStartFragment:0000000050\r\nEndFragment:0000009999\r\nrest",
+            "Version:0.9\r\nStartFragment:notanumber\r\nEndFragment:0000000010\r\nrest",
+        ] {
+            assert_eq!(fragment_from_cf_html(broken), broken);
+        }
+    }
+}
+
 /// Runs on a blocking thread on purpose: the plugin documents that its read must
 /// not run on the main thread (Linux deadlock), and spawn_blocking also contains
 /// a panic from a poisoned clipboard mutex instead of taking the app down.
@@ -819,6 +948,7 @@ pub fn run() {
             app_version,
             add_to_dictionary,
             read_clipboard_text,
+            read_clipboard_html,
             write_clipboard_text,
             take_pending_open,
         ])

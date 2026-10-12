@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { EditorView, keymap, ViewPlugin, Decoration, drawSelection, type DecorationSet, type ViewUpdate } from '@codemirror/view';
-	import { EditorState, Compartment, StateEffect, StateField, RangeSetBuilder } from '@codemirror/state';
+	import { EditorState, Compartment, StateEffect, StateField, RangeSetBuilder, Prec } from '@codemirror/state';
 	import { defaultKeymap, history, historyKeymap, undo, redo } from '@codemirror/commands';
 	import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 	import { syntaxHighlighting, defaultHighlightStyle, syntaxTree } from '@codemirror/language';
@@ -10,6 +10,7 @@
 	import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 	import { invoke } from '@tauri-apps/api/core';
 	import { transformCase, type TransformType } from './commands';
+	import { toPlainText, htmlToText, normalizePasted } from './clipboard';
 
 	function syncDirty(dirty: boolean) {
 		onDirtyChange?.(dirty);
@@ -287,11 +288,60 @@
 		});
 	}
 
+	// The Rust read only sees the plain-text flavour. Browsers register that flavour
+	// for delayed rendering, so it can legitimately read back empty while the HTML
+	// flavour is already on the clipboard — read that instead and convert it.
+	async function readClipboardFallback(): Promise<string> {
+		try {
+			if (!navigator.clipboard?.read) return '';
+			const items = await navigator.clipboard.read();
+			let plain = '';
+			let html = '';
+			for (const item of items) {
+				for (const type of item.types) {
+					if (type === 'text/plain' && !plain) plain = await (await item.getType(type)).text();
+					else if (type === 'text/html' && !html) html = await (await item.getType(type)).text();
+				}
+			}
+			return toPlainText({ text: plain, html });
+		} catch (e) {
+			// Denied or unavailable — WebView2 often denies it. Caller reports.
+			console.error('[paste] navigator.clipboard.read failed:', e);
+			return '';
+		}
+	}
+
 	function createEditor() {
 		const state = EditorState.create({
 			doc,
 			extensions: [
-				history(),
+				// EVERY paste becomes plain text, by explicit request. Reading it here also
+			// rescues a read that can legitimately come back empty from Rust: the
+			// webview resolves delayed-render clipboard sources (browsers) itself, so
+			// its clipboardData carries the HTML flavour even when the plain-text
+			// flavour has not been rendered yet.
+			Prec.highest(
+				EditorView.domEventHandlers({
+					paste: (event: ClipboardEvent, v: EditorView) => {
+						const text = toPlainText({
+							text: event.clipboardData?.getData('text/plain') ?? '',
+							html: event.clipboardData?.getData('text/html') ?? '',
+						});
+						event.preventDefault();
+						if (!text) {
+							onNotice?.('Nothing to paste - the clipboard is empty.');
+							return true;
+						}
+						v.dispatch({
+							...v.state.replaceSelection(text),
+							scrollIntoView: true,
+							userEvent: 'input.paste',
+						});
+						return true;
+					},
+				})
+			),
+			history(),
 				drawSelection(),
 				keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, ...completionKeymap]),
 				search({ top: true }),
@@ -457,7 +507,7 @@
 				},
 
 				handlePaste: async () => {
-					// Menu paste must NOT use the webview clipboard APIs on Windows:
+					// Menu paste must NOT rely on the webview clipboard APIs on Windows:
 					// navigator.clipboard.readText() is denied by WebView2, and
 					// document.execCommand('paste') is disabled for web content
 					// outright, so BOTH are dead ends there (v0.2.36 shipped on the
@@ -472,11 +522,22 @@
 						// Logged so a real Windows failure leaves evidence instead of
 						// another silent no-op - paste has been mis-reported twice.
 						console.error('[paste] read_clipboard_text failed:', e);
+					}
+					if (!rawText) {
+						// Rust produced nothing from the plain-text flavour. That is the BROWSER
+						// case: browsers delayed-render that flavour, so it can read back empty
+						// while the HTML flavour is already on the clipboard. Read that one
+						// natively (no permission prompt) and reduce it to text.
 						try {
-							rawText = await navigator.clipboard.readText();
-						} catch {
-							rawText = '';
+							rawText = htmlToText(await invoke<string>('read_clipboard_html'));
+						} catch (e) {
+							console.error('[paste] read_clipboard_html failed:', e);
 						}
+					}
+					if (!rawText) {
+						// Last resort: the webview's own reader. WebView2 usually denies it, but
+						// it costs nothing to try and it resolves the delay itself when allowed.
+						rawText = await readClipboardFallback();
 					}
 					if (!rawText) {
 						// Never fail silently again. This exact spot was mis-reported as
@@ -485,10 +546,16 @@
 						onNotice?.('Paste failed - the clipboard was busy. Try again.');
 						return;
 					}
+					const text = normalizePasted(rawText);
+					if (!text) {
+						onNotice?.('Nothing to paste - the clipboard is empty.');
+						return;
+					}
 					const sel = view.state.selection.main;
 					view.dispatch({
-						changes: { from: sel.from, to: sel.to, insert: rawText },
-						selection: { anchor: sel.from + rawText.length },
+						changes: { from: sel.from, to: sel.to, insert: text },
+						selection: { anchor: sel.from + text.length },
+						userEvent: 'input.paste',
 					});
 				},
 

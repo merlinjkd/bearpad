@@ -20,3 +20,14 @@ tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 hunspell-rs = "0.4.0"
+
+[target.'cfg(windows)'.dependencies]
+# Already in the tree via arboard (the clipboard plugin's backend), so promoting it to
+# a direct dependency adds no new lock entries. Used for exactly one thing: reading
+# the clipboard's registered "HTML Format" payload, which browsers provide eagerly
+# while the plain-text flavour is delayed-rendered and can read back empty.
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_System_DataExchange",
+    "Win32_System_Memory",
+] }
