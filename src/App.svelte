@@ -9,7 +9,7 @@ import { listen } from '@tauri-apps/api/event';
 	import { getCurrentWindow } from '@tauri-apps/api/window';
 	import bearpawIcon from './assets/bearpaw.png';
 import {
-	FilePlus, FolderOpen, Save, Info, Power,
+	FilePlus, FolderOpen, Save, Info, Power, History, ChevronRight,
 	Undo2, Redo2, Scissors, Copy, ClipboardPaste, Search,
 	ZoomIn, ZoomOut, RotateCcw, Moon, Sun, WrapText, SpellCheck,
 	CaseLower, CaseUpper, CaseSensitive,
@@ -74,6 +74,11 @@ import {
 	let cursorBlink = $state(false);
 	let textColor = $state('');
 	let defaultFormat = $state<'txt' | 'md'>('txt');
+
+	// File > Open Recent. Persisted alongside the other settings; file paths, most
+	// recently opened first. Five entries, as specified.
+	const RECENT_LIMIT = 5;
+	let recentFiles = $state<string[]>([]);
 	let resolvedTheme = $state<'dark' | 'light'>('dark');
 	let editorTheme = $state<'dark' | 'light'>('dark');
 
@@ -103,6 +108,15 @@ import {
 			action?: () => void;
 			disabled?: boolean | (() => boolean);
 			icon?: any;
+			// Right-hand flyout (File > Open Recent). Read lazily, so it always shows
+			// the list as it stands when the menu is opened.
+			submenu?: () => {
+				label: string;
+				hint?: string;
+				muted?: boolean;
+				separator?: boolean;
+				action?: () => void;
+			}[];
 		}[];
 	}[] = [
 		{
@@ -110,6 +124,7 @@ import {
 			items: [
 				{ label: 'New', icon: FilePlus, action: () => newFile() },
 				{ label: 'Open...', icon: FolderOpen, action: () => openFile() },
+				{ label: 'Open Recent', icon: History, submenu: () => recentMenu() },
 				{ separator: true },
 				{ label: 'Save', icon: Save, action: () => saveFile() },
 				{ label: 'Save As...', icon: Save, action: () => saveFileAs() },
@@ -290,6 +305,55 @@ import {
 		updateTitle();
 	}
 
+	// ─── File > Open Recent ──────────────────────────────
+
+	function baseName(path: string) {
+		// Windows paths use '\' — splitting on '/' alone returns the whole path there.
+		return path.split(/[/\\]/).pop() || path;
+	}
+
+	// Entries show the basename, the same rule as tabs and the title bar, plus the
+	// containing folder as a muted hint so two same-named files stay tellable apart.
+	function recentParts(path: string) {
+		const parts = path.split(/[/\\]/).filter(Boolean);
+		return {
+			name: baseName(path),
+			hint: parts.length > 1 ? parts[parts.length - 2] : '',
+		};
+	}
+
+	function rememberRecent(path: string) {
+		recentFiles = [path, ...recentFiles.filter((p) => p !== path)].slice(0, RECENT_LIMIT);
+		saveSettings();
+	}
+
+	function clearRecent() {
+		recentFiles = [];
+		saveSettings();
+	}
+
+	async function openRecent(path: string) {
+		if (!(await openPath(path))) {
+			// Gone or unreadable — stop offering it.
+			recentFiles = recentFiles.filter((p) => p !== path);
+			saveSettings();
+		}
+	}
+
+	function recentMenu() {
+		if (recentFiles.length === 0) {
+			return [{ label: 'No recent files', muted: true }];
+		}
+		return [
+			...recentFiles.map((p) => {
+				const { name, hint } = recentParts(p);
+				return { label: name, hint, action: () => openRecent(p) };
+			}),
+			{ separator: true },
+			{ label: 'Clear Recent', action: () => clearRecent() },
+		];
+	}
+
 	async function openFile() {
 		const selected = await open({ filters: FILTERS, multiple: false });
 		if (!selected) return;
@@ -299,12 +363,13 @@ import {
 	// Open `path` in a tab, reusing it when already open. Also the entry point for a
 	// file handed to the app at launch (double-click / Open With) and for a file
 	// handed over by a second launch - see the onMount wiring.
-	async function openPath(path: string, dropEmptyUntitled = false) {
+	async function openPath(path: string, dropEmptyUntitled = false): Promise<boolean> {
 		const existing = tabs.find((t) => t.path === path);
 		if (existing) {
 			activeTabId = existing.id;
 			updateTitle();
-			return;
+			rememberRecent(path);
+			return true;
 		}
 		try {
 			const content = await invoke<string>('read_file', { path });
@@ -323,11 +388,14 @@ import {
 				if (idx !== -1) tabs.splice(idx, 1);
 			}
 			updateTitle();
+			rememberRecent(path);
+			return true;
 		} catch (e) {
 			console.error('Failed to open file:', e);
 			// Silent here meant the user saw the blank default editor and concluded
 			// the file was empty. Say something instead.
 			showNotice('Could not open that file.');
+			return false;
 		}
 	}
 
@@ -378,6 +446,7 @@ import {
 			tab.ref?.markSaved();
 			updateTitle();
 			updateRecovery();
+			rememberRecent(path);
 		} catch (e) {
 			console.error('Failed to save file:', e);
 		}
@@ -424,6 +493,9 @@ import {
 			if (s.cursorBlink != null) cursorBlink = s.cursorBlink;
 			if (s.textColor) textColor = s.textColor;
 			if (s.defaultFormat === 'md' || s.defaultFormat === 'txt') defaultFormat = s.defaultFormat;
+			if (Array.isArray(s.recentFiles)) {
+				recentFiles = s.recentFiles.filter((p: unknown) => typeof p === 'string');
+			}
 		} catch { /* defaults */ }
 		resolveTheme();
 	}
@@ -431,7 +503,7 @@ import {
 	async function saveSettings() {
 		try {
 			await invoke('write_settings', {
-				json: JSON.stringify({ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck, spellLang, cursorBlink, textColor, defaultFormat }),
+				json: JSON.stringify({ theme, fontSize, uiFontSize, fontFamily, wordWrap, spellcheck, spellLang, cursorBlink, textColor, defaultFormat, recentFiles }),
 			});
 		} catch (e) {
 			console.error('Failed to save settings:', e);
@@ -786,6 +858,49 @@ import {
 							{@const disabled = typeof item.disabled === 'function' ? item.disabled() : item.disabled}
 							{#if item.separator}
 								<div class="menu-sep h-px bg-menu-sep my-1 mx-2"></div>
+							{:else if item.submenu}
+								<div class="group/recent relative w-full">
+									<div
+										class="menu-action flex items-center gap-2.5 w-full text-left py-[5px] px-4 text-ui text-menu-text cursor-default hover:bg-[#094771] hover:text-white"
+										role="menuitem"
+										aria-haspopup="menu"
+									>
+										{#if item.icon}
+											<span class="menu-action-icon inline-flex items-center justify-center shrink-0 opacity-90">
+												<svelte:component this={item.icon} size={15} strokeWidth={1.75} />
+											</span>
+										{/if}
+										<span class="flex-1">{item.label}</span>
+										<ChevronRight size={14} strokeWidth={1.75} class="shrink-0 opacity-70" />
+									</div>
+									<!-- Flyout: revealed by hovering the row above, opened to the side. -->
+									<div
+										class="menu-dropdown absolute left-full top-[-5px] hidden group-hover/recent:block min-w-[260px] bg-menu-bg border border-menu-border shadow-[0_6px_16px_rgba(0,0,0,0.4)] py-1"
+										role="menu"
+									>
+										{#each item.submenu() as entry}
+											{#if entry.separator}
+												<div class="menu-sep h-px bg-menu-sep my-1 mx-2"></div>
+											{:else}
+												<button
+													class="menu-action flex items-center gap-3 w-full text-left py-[5px] px-4 text-ui bg-transparent border-0 text-menu-text cursor-default hover:bg-[#094771] hover:text-white disabled:opacity-40 disabled:hover:bg-transparent"
+													role="menuitem"
+													disabled={entry.muted || !entry.action}
+													onclick={(e) => {
+														e.stopPropagation();
+														entry.action?.();
+														openMenu = null;
+													}}
+												>
+													<span class="flex-1 truncate">{entry.label}</span>
+													{#if entry.hint}
+														<span class="shrink-0 max-w-[120px] truncate text-[0.8em] opacity-55">{entry.hint}</span>
+													{/if}
+												</button>
+											{/if}
+										{/each}
+									</div>
+								</div>
 							{:else}
 								<button
 									class="menu-action flex items-center gap-2.5 w-full text-left py-[5px] px-4 text-ui bg-transparent border-0 text-menu-text cursor-default hover:bg-[#094771] hover:text-white disabled:opacity-40 disabled:cursor-default disabled:hover:bg-transparent disabled:hover:text-menu-text"
@@ -934,7 +1049,7 @@ import {
 				<h2 class="about-name m-0 text-[18px] font-semibold text-menu-text">BearPad</h2>
 				<p class="about-version m-0 text-[14px] text-[#888]">Version {appVersion}</p>
 				<p class="about-desc mt-1 mb-3 mx-0 w-full text-[13px] text-[#999] text-left leading-[1.4]">
-					A small fast cross platform text and markdown editor. It features Scalable Fonts and UI, Text Transformation, Find and Replace, Multiple Tabs and Autosave. Built in Rust and Tauri.
+					A small fast cross platform text and markdown editor. It features Scalable Fonts and UI, Text Transformation, Find and Replace, Multiple Tabs and Autosave.
 				</p>
 				<button class="about-ok py-1.5 px-7 border-0 rounded-md bg-[#094771] text-white text-[14px] cursor-pointer hover:bg-[#0a5a8f]" onclick={closeAbout}>OK</button>
 			</div>
