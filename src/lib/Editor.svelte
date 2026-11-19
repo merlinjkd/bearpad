@@ -4,13 +4,14 @@
 	import { EditorState, Compartment, StateEffect, StateField, RangeSetBuilder, Prec } from '@codemirror/state';
 	import { defaultKeymap, history, historyKeymap, undo, redo } from '@codemirror/commands';
 	import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-	import { syntaxHighlighting, defaultHighlightStyle, syntaxTree } from '@codemirror/language';
+	import { syntaxHighlighting, syntaxTree } from '@codemirror/language';
 	import { searchKeymap, search, highlightSelectionMatches, openSearchPanel, selectMatches, replaceAll } from '@codemirror/search';
 	import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 	import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 	import { invoke } from '@tauri-apps/api/core';
 	import { transformCase, type TransformType } from './commands';
 	import { toPlainText, htmlToText, normalizePasted } from './clipboard';
+	import { markdownHighlight } from './highlighting';
 
 	function syncDirty(dirty: boolean) {
 		onDirtyChange?.(dirty);
@@ -79,8 +80,8 @@
 	const textColorCompartment = new Compartment();
 
 	// Empty string = theme default; otherwise override the editor text color.
-	// !important beats the per-token highlight colors (defaultHighlightStyle
-	// paints .cm-content spans with syntax colors via hashed classes).
+	// !important is kept because the spell-error rule and the theme's own
+	// .cm-content colour would otherwise tie on specificity.
 	const textColorStyle = (c: string) =>
 		c
 			? EditorView.theme({
@@ -348,7 +349,7 @@
 				highlightSelectionMatches(),
 				markdown({ base: markdownLanguage }),
 				linkClassPlugin,
-				syntaxHighlighting(defaultHighlightStyle),
+				syntaxHighlighting(markdownHighlight),
 				blinkCompartment.of(cursorBlinkStyle(cursorBlink)),
 				textColorCompartment.of(textColorStyle(textColor)),
 				autocompletion(),
