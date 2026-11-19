@@ -7,7 +7,8 @@
 	import { open, save as showSaveDialog, confirm as showConfirm } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
 	import { getCurrentWindow } from '@tauri-apps/api/window';
-	import bearpawIcon from './assets/bearpaw.png';
+	import bearpawLight from './assets/bearpaw-light.png';
+	import bearpawDark from './assets/bearpaw-dark.png';
 import {
 	FilePlus, FolderOpen, Save, Info, Power, History, ChevronRight,
 	Undo2, Redo2, Scissors, Copy, ClipboardPaste, Search,
@@ -82,6 +83,10 @@ import {
 	let recentFiles = $state<string[]>([]);
 	let resolvedTheme = $state<'dark' | 'light'>('dark');
 	let editorTheme = $state<'dark' | 'light'>('dark');
+
+	// Two renders of the same artwork: the pale tile for light mode, the navy one
+	// for dark. Both have transparent corners, so either sits on any palette.
+	const appIcon = $derived(resolvedTheme === 'light' ? bearpawLight : bearpawDark);
 
 	let ctxMenu = $state<{ show: boolean; x: number; y: number; items: any[] }>({
 		show: false,
@@ -817,7 +822,7 @@ import {
 			{#if isMac}{@render windowControls()}{/if}
 		</div>
 		<div class="titlebar-content flex items-center gap-2.5 flex-1 min-w-0" data-tauri-drag-region>
-			<img class="title-bar-icon w-6 h-6 rounded-[5px]" src={bearpawIcon} alt="" draggable="false" />
+			<img class="title-bar-icon w-6 h-6 rounded-[5px]" src={appIcon} alt="" draggable="false" />
 			<span class="title-bar-title text-[16px] font-semibold text-title-text" data-tauri-drag-region>BearPad - {fileName(activeTab())}</span>
 		</div>
 		<div class="titlebar-slot flex items-center gap-0.5" data-tauri-drag-region>
@@ -1041,7 +1046,7 @@ import {
 				aria-label="About BearPad"
 				tabindex="-1"
 			>
-				<img class="about-icon w-[72px] h-[72px] rounded-2xl mb-1.5" src={bearpawIcon} alt="" draggable="false" />
+				<img class="about-icon w-[72px] h-[72px] rounded-2xl mb-1.5" src={appIcon} alt="" draggable="false" />
 				<h2 class="about-name m-0 text-[18px] font-semibold text-menu-text">BearPad</h2>
 				<p class="about-version m-0 text-[14px] text-[#888]">Version {appVersion}</p>
 				<p class="about-desc mt-1 mb-3 mx-0 w-full text-[13px] text-[#999] text-left leading-[1.4]">
