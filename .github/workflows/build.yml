@@ -168,6 +168,21 @@ jobs:
           # provision the Flathub remote so the runner can pull it.
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
+      - name: Locate libclang
+        # hunspell-rs builds through clang-sys, which needs libclang at build time.
+        # The directory was hardcoded to llvm-18 and the runner's LLVM version moved
+        # on, so clang-sys found nothing and the build died before Tauri started.
+        # Resolve it from whatever libclang-dev installed instead of naming a version.
+        run: |
+          libdir="$(dirname "$(find /usr/lib /usr/local/lib -name 'libclang.so*' -print -quit 2>/dev/null)")"
+          if [ -z "$libdir" ] || [ ! -d "$libdir" ]; then
+            echo "::error::libclang not found; hunspell-rs cannot build"
+            exit 1
+          fi
+          echo "LIBCLANG_PATH=$libdir" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$libdir" >> "$GITHUB_ENV"
+          echo "Using libclang from $libdir"
+
       - name: Install dependencies
         run: npm ci || npm install
 
@@ -176,8 +191,6 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ""
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
-          LIBCLANG_PATH: /usr/lib/llvm-18/lib
-          LD_LIBRARY_PATH: /usr/lib/llvm-18/lib
 
       - name: Upload Linux Artifacts
         env:
