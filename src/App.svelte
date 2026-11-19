@@ -16,6 +16,7 @@ import {
 } from 'lucide-svelte';
 
 	import { editorCommands } from './lib/commands';
+	import { autosaveDirtyFiles } from './lib/autosave';
 
 	// Platform detection used ONLY to choose which titlebar slot holds the window
 	// controls. Deliberately navigator.userAgent, not @tauri-apps/plugin-os: it is
@@ -277,22 +278,15 @@ import {
 	}
 
 	// Autosave: files with a path are written after 120s of idle changes;
-	// untitled tabs go to the recovery store on the same cadence.
+	// untitled tabs go to the recovery store on the same cadence. The rules live in
+	// lib/autosave.ts so they can be tested; this tick only supplies the IO.
 	setInterval(() => {
-		const now = Date.now();
-		for (const tab of tabs) {
-			if (!tab.ref?.isDirty()) continue;
-			if (!tab.lastChange || now - tab.lastChange < 120_000) continue;
-			const content = tab.ref.getContent();
-			if (tab.path) {
-				invoke('write_file', { path: tab.path, content })
-					.then(() => {
-						tab.ref?.markSaved();
-						updateTitle();
-					})
-					.catch(() => {});
-			}
-		}
+		void autosaveDirtyFiles(
+			tabs,
+			(path, content) => invoke('write_file', { path, content }),
+			Date.now(),
+			updateTitle,
+		);
 		updateRecovery();
 	}, 30_000);
 
@@ -414,7 +408,9 @@ import {
 			const content = ref.getContent();
 			try {
 				await invoke('write_file', { path: tab.path, content });
-				tab.ref?.markSaved();
+				// Same rule as autosave: only claim the tab is on disk if the snapshot
+				// that reached it is still the whole document.
+				if (ref.getContent() === content) ref.markSaved();
 				updateTitle();
 			} catch (e) {
 				console.error('Failed to save file:', e);
